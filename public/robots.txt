@@ -9,5 +9,3 @@ Disallow: /build/
 Allow: /public/
 Allow: /resources/
 
-# Uncomment and update the following line if you have a sitemap
-# Sitemap: https://yourdomain.com/sitemap.xml
