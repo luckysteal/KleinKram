@@ -9,6 +9,10 @@ export default {
         './resources/views/**/*.blade.php',
     ],
 
+    safelist: [
+        'animate-fall-down',
+    ],
+
     theme: {
         extend: {
             fontFamily: {
