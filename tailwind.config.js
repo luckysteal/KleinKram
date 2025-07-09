@@ -14,6 +14,21 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            animation: {
+                'fall-down': 'fall-down 2s ease-out forwards',
+            },
+            keyframes: {
+                'fall-down': {
+                    '0%': {
+                        transform: 'translateY(-100vh)',
+                        opacity: '0'
+                    },
+                    '100%': {
+                        transform: 'translateY(0)',
+                        opacity: '1'
+                    },
+                }
+            }
         },
     },
 

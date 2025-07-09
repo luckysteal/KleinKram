@@ -1,19 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import 'override.css';
 
 [x-cloak] {
     display: none !important;
 }
 
-@keyframes fall-down {
-    0% {
-        transform: translateX(-50%) translateY(-2000px) scale(0.2); /* Start 2000px above final position, small, centered horizontally */
-        opacity: 1;
-    }
-    100% {
-        transform: translateX(-50%) translateY(0) scale(1); /* End at its natural position, full size, centered horizontally */
-        opacity: 1;
-    }
-}
+
