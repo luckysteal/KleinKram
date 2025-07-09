@@ -11,11 +11,15 @@
             drinks: {{ $numberOfDrinksPerVisit }},
             drinkIcon: '{{ str_replace(["\n", "\r"], "", $drink->icon_svg) }}',
             maxDrinksForFullSize: 50, // Max drinks for full size icon
-            minIconSize: 0.2, // Minimum scale for icons
+            minIconSize: 0.5, // Minimum scale for icons
             maxIconSize: 1.0, // Maximum scale for icons
             baseAnimationDuration: 2.0, // Base animation duration
             animationDelayMultiplier: 0.005, // Delay per icon
-            maxRenderedDrinks: 1500 // Limit for performance
+            maxRenderedDrinks: 1500, // Limit for performance
+            iconSize: 1.0,
+            init() {
+                this.iconSize = Math.max(this.minIconSize, this.maxIconSize - (this.drinks / this.maxDrinksForFullSize) * (this.maxIconSize - this.minIconSize));
+            }
         }">
             <template x-for="i in Math.min(drinks, maxRenderedDrinks)" :key="i">
                 <div
@@ -24,8 +28,8 @@
                         bottom: ${ (i - 1) * 1 }px; /* Reduced stacking height for better visibility */
                         left: ${ Math.random() * 100 }%; /* Wider random spread */
                         animation-duration: ${ baseAnimationDuration + (i * animationDelayMultiplier) }s;
-                        width: 50px; /* Smaller width for the SVG container */
-                        height: 70px; /* Smaller height for the SVG container */
+                        width: ${ 50 * this.iconSize }px;
+                        height: ${ 70 * this.iconSize }px;
                     `"
                 >
                     <x-svg-icon :svg="$drink->icon_svg"></x-svg-icon>
@@ -43,10 +47,6 @@
                 @if($applyTax)
                     <p class="mb-2">{{ __('Your netto money') }} ({{ __($period) }}): <span class="font-semibold">€{{ number_format($nettoMoney, 2) }}</span></p>
                     <p class="mb-2">{{ __('Your yearly netto money') }}: <span class="font-semibold">€{{ number_format($taxCalculationResults['yearly_netto'], 2) }}</span></p>
-
-                    @if($taxCalculationResults['selected_tax_bracket'])
-                        <p class="mb-2 text-sm">{{ __('Selected Tax Bracket') }}: <span class="font-semibold">€{{ number_format($taxCalculationResults['selected_tax_bracket']['min'], 0) }} - €{{ number_format($taxCalculationResults['selected_tax_bracket']['max'], 0) }} ({{ $taxCalculationResults['selected_tax_bracket']['description'] }})</span></p>
-                    @endif
 
                     <h3 class="text-xl font-bold text-gray-800 dark:text-white mt-6 mb-4">{{ __('Tax Breakdown (Yearly)') }}</h3>
                     <ul class="list-disc list-inside mb-4">
@@ -76,20 +76,29 @@
                 @if(!empty($daysPerWeek) && $numberOfDrinksPerVisit > 0)
                     <p class="mt-4">{{ __('You can buy approximately') }} <span class="font-semibold">{{ $numberOfDrinksPerVisit }}</span> {{ $drink->name }} {{ __('per visit') }} ({{ __('based on') }} {{ count($daysPerWeek) }} {{ __('visits per week') }}).</p>
                 @endif
+                <p class="mt-4">{{ __('With your yearly income, you could buy') }} <span class="font-semibold">{{ $drinksPerDayYearly }}</span> {{ $drink->name }} {{ __('every day for a year') }}.</p>
             </div>
 
-            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Share your results:') }}</p>
-                <button type="button" @click="
-                    const linkText = '{{ $shareableLink }}';
-                    navigator.clipboard.writeText(linkText).then(() => {
-                        $el.nextElementSibling.classList.remove('hidden');
-                        setTimeout(() => $el.nextElementSibling.classList.add('hidden'), 2000);
-                    });
-                " class="mt-2 inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                    Copy Link
-                </button>
-                <span class="text-sm text-green-600 ml-2 hidden" x-ref="copiedMessage">Copied!</span>
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-start justify-between">
+                <div class="flex-grow">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Share your results:') }}</p>
+                    <button type="button" @click="
+                        const linkText = '{{ $shareableLink }}';
+                        navigator.clipboard.writeText(linkText).then(() => {
+                            $el.nextElementSibling.classList.remove('hidden');
+                            setTimeout(() => $el.nextElementSibling.classList.add('hidden'), 2000);
+                        });
+                    " class="mt-2 inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('Copy Link') }}
+                    </button>
+                    <span class="text-sm text-green-600 ml-2 hidden" x-ref="copiedMessage">Copied!</span>
+                </div>
+                <div class="ml-4 mt-auto">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Start a new calculation:') }}</p>
+                    <a href="{{ route('mexi-calculator.index') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('New Calculation') }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>
