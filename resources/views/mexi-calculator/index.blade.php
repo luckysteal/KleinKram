@@ -6,23 +6,20 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-md w-full mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
+        <div class="max-w-md w-full mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8" x-data="{ incomePeriod: 'monthly', showTaxOptions: false }">
             <h1 class="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">{{ __('Mexicalculator') }}</h1>
 
-            <form action="{{ route('mexi-calculator.calculate') }}" method="POST" x-data="{
-                showTaxOptions: {{ $globalTaxEnabled ? 'true' : 'false' }},
-                incomePeriod: 'monthly',
-                get moneyLabel() {
-                    let period = this.incomePeriod;
-                    if (period === 'monthly') {
-                        return '{{ __('Your monthly Money (€)') }}';
-                    } else if (period === 'yearly') {
-                        return '{{ __('Your yearly Money (€)') }}';
-                    } else {
-                        return '{{ __('Your daily Money (€)') }}';
-                    }
-                }
-            }">
+            @if ($errors->any())
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form action="{{ route('mexi-calculator.calculate') }}" method="POST" class="space-y-8">
                 @csrf
 
                 <div class="mb-6">
@@ -53,7 +50,7 @@
                 </div>
 
                 <div class="mb-6 flex items-center">
-                    <input type="checkbox" name="apply_tax" id="apply_tax" x-model="showTaxOptions" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 transition duration-150 ease-in-out">
+                    <input type="checkbox" name="apply_tax" id="apply_tax" x-model="showTaxOptions" value="1" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 transition duration-150 ease-in-out">
                     <label for="apply_tax" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enable Tax Calculation') }}</label>
                 </div>
 

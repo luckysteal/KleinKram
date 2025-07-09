@@ -36,11 +36,11 @@ class MexiCalculatorController extends Controller
             'period' => 'required|in:yearly,monthly,daily',
             'apply_tax' => 'nullable|boolean',
             'apply_church_tax' => 'nullable|boolean',
-            'allowance' => 'numeric|min:0',
+            'allowance' => 'nullable|numeric|min:0',
             'tax_class' => 'required_if:apply_tax,true|integer|min:1|max:6',
             'has_children' => 'nullable|boolean',
             'is_single_parent' => 'nullable|boolean',
-            'health_insurance_additional_rate' => 'numeric|min:0',
+            'health_insurance_additional_rate' => 'nullable|numeric|min:0',
             'is_childless' => 'nullable|boolean',
             'is_over23' => 'nullable|boolean',
             'days_per_week' => 'nullable|array',
@@ -86,7 +86,7 @@ class MexiCalculatorController extends Controller
             'period' => 'required|in:yearly,monthly,daily',
             'apply_tax' => 'nullable|boolean',
             'apply_church_tax' => 'nullable|boolean',
-            'allowance' => 'numeric|min:0',
+            'allowance' => 'nullable|numeric|min:0',
             'tax_class' => 'required_if:apply_tax,true|integer|min:1|max:6',
             'has_children' => 'nullable|boolean',
             'is_single_parent' => 'nullable|boolean',
@@ -174,6 +174,8 @@ class MexiCalculatorController extends Controller
         $actualRenderedDrinks = min($numberOfDrinksPerVisit, $maxRenderedDrinks);
         $maxAnimationDuration = min(($baseAnimationDuration + ($actualRenderedDrinks * $animationDelayMultiplier)), 10) * 1000; // Convert to milliseconds and cap at 10 seconds
 
+        $drinksPerDayYearly = floor($yearlyNettoMoney / 365 / $drink->price);
+
         return view('mexi-calculator.results', compact(
             'bruttoMoney',
             'nettoMoney',
@@ -196,7 +198,8 @@ class MexiCalculatorController extends Controller
             'isChildless',
             'isOver23',
             'dailyNumberOfDrinks',
-            'maxAnimationDuration'
+            'maxAnimationDuration',
+            'drinksPerDayYearly'
         ));
     }
 }
