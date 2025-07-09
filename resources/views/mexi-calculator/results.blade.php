@@ -19,11 +19,11 @@
         }">
             <template x-for="i in Math.min(drinks, maxRenderedDrinks)" :key="i">
                 <div
-                    class="absolute ease-out"
+                    class="absolute ease-out animate-fall-down"
                     :style="`
                         bottom: ${ (i - 1) * 1 }px; /* Reduced stacking height for better visibility */
                         left: ${ Math.random() * 100 }%; /* Wider random spread */
-                        animation: fall-down ${ baseAnimationDuration + (i * animationDelayMultiplier) }s ease-out forwards;
+                        animation-duration: ${ baseAnimationDuration + (i * animationDelayMultiplier) }s;
                         width: 50px; /* Smaller width for the SVG container */
                         height: 70px; /* Smaller height for the SVG container */
                     `"
