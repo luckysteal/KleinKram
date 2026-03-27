@@ -1,9 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Ticking Bomb') }}
-        </h2>
-    </x-slot>
 
     <div class="flex-grow flex flex-col w-full relative" x-data="bombGame()">
         <div class="flex-grow flex flex-col w-full h-full">
@@ -78,47 +73,53 @@
                 </div>
 
                 <!-- Explosion State (End Screen Redesign) - Standard and LMS -->
-                <div x-show="gameState === 'exploded' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-rose-600 flex flex-col items-center justify-center p-8 text-white text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
-                    <div class="relative mb-8">
+                <div x-show="gameState === 'exploded' || gameState === 'overall_winner'" 
+                    x-transition:enter="transition ease-out duration-300" 
+                    x-transition:enter-start="opacity-0 scale-95" 
+                    x-transition:enter-end="opacity-100 scale-100" 
+                    class="absolute inset-0 z-50 bg-rose-600 overflow-y-auto p-4 sm:p-8 text-white text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
+                    <div class="min-h-full flex flex-col items-center justify-center py-8">
+                    <div class="relative mb-8 sm:mb-12">
                         <template x-if="gameState === 'overall_winner'">
                             <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-40 rounded-full animate-pulse scale-150"></div>
                         </template>
                         <template x-if="gameState === 'exploded'">
                             <div class="absolute inset-0 bg-white blur-3xl opacity-30 rounded-full animate-pulse scale-150"></div>
                         </template>
-                        <div class="relative w-40 h-40 bg-white rounded-full flex items-center justify-center border-8 border-rose-500 shadow-[0_30px_60px_rgba(0,0,0,0.3)]">
-                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-bomb text-7xl text-rose-600'"></i>
+                        <div class="relative w-28 h-28 sm:w-40 sm:h-40 bg-white rounded-full flex items-center justify-center border-4 sm:border-8 border-rose-500 shadow-[0_30px_60px_rgba(0,0,0,0.3)]">
+                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-4xl sm:text-7xl' : 'fa-bomb text-4xl sm:text-7xl text-rose-600'"></i>
                         </div>
                     </div>
 
-                    <div class="mb-12">
+                    <div class="mb-8 sm:mb-12">
                         <template x-if="gameState === 'overall_winner'">
                             <div>
-                                <h1 class="text-xs font-black uppercase tracking-[1em] text-white/50 mb-4 px-2">{{ __('ULTIMATE CHAMPION') }}</h1>
-                                <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]" x-text="winnerName"></div>
-                                <p class="text-amber-200 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('LAST MAN STANDING!') }}</p>
+                                <h1 class="text-[10px] sm:text-xs font-black uppercase tracking-[0.5em] sm:tracking-[1em] text-white/50 mb-4 px-2">{{ __('ULTIMATE CHAMPION') }}</h1>
+                                <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]" x-text="winnerName"></div>
+                                <p class="text-amber-200 text-base sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('LAST MAN STANDING!') }}</p>
                             </div>
                         </template>
                         <template x-if="gameState === 'exploded'">
                             <div>
-                                <h1 class="text-xs font-black uppercase tracking-[1em] text-white/50 mb-4 px-2">{{ __('Detonated') }}</h1>
-                                <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]" x-text="players[currentPlayerIndex]"></div>
-                                <p class="text-rose-200 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('Prepare your wallet!') }}'"></p>
+                                <h1 class="text-[10px] sm:text-xs font-black uppercase tracking-[0.5em] sm:tracking-[1em] text-white/50 mb-4 px-2">{{ __('Detonated') }}</h1>
+                                <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]" x-text="players[currentPlayerIndex]"></div>
+                                <p class="text-rose-200 text-base sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('Prepare your wallet!') }}'"></p>
                             </div>
                         </template>
                     </div>
 
                     <template x-if="gameState === 'overall_winner'">
-                        <button @click="resetRound()" class="w-full max-w-sm py-6 bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all hover:scale-105 uppercase tracking-tighter">
+                        <button @click="resetRound()" class="w-full max-w-sm py-4 sm:py-6 bg-amber-500 text-white font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all hover:scale-105 uppercase tracking-tighter">
                             {{ __('NEW ROUND') }}
                         </button>
                     </template>
                     <template x-if="gameState === 'exploded'">
-                        <button @click="resetGame()" class="w-full max-w-sm py-6 bg-white text-rose-600 font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all hover:scale-105 uppercase tracking-tighter">
+                        <button @click="resetGame()" class="w-full max-w-sm py-4 sm:py-6 bg-white text-rose-600 font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.2)] transition-all hover:scale-105 uppercase tracking-tighter">
                             <span x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('NEXT SACRIFICE') }}'"></span>
                         </button>
                     </template>
                 </div>
+            </div>
 
 
 

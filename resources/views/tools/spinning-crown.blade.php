@@ -1,9 +1,4 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Spinning Crown') }}
-        </h2>
-    </x-slot>
 
     <div class="flex-grow flex flex-col w-full relative" x-data="crownGame()">
         <div class="flex-grow flex flex-col w-full">
@@ -144,7 +139,8 @@
                     <div id="canvas-container"></div>
                     
                     @if(empty($names))
-                    <div id="no-players-overlay" class="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                    <div id="no-players-overlay" class="absolute inset-0 z-30 bg-black/80 backdrop-blur-md overflow-y-auto p-4 sm:p-6 text-center">
+                        <div class="min-h-full flex flex-col items-center justify-center py-8">
                         <div class="bg-indigo-600/20 border border-indigo-500/50 p-8 rounded-2xl max-w-md">
                             <svg class="w-16 h-16 text-indigo-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -158,10 +154,16 @@
                             </a>
                         </div>
                     </div>
+                </div>
                     @endif
 
                     <!-- Winner Overlay (Standard and LMS) -->
-                    <div x-show="gameState === 'winner' || gameState === 'overall_winner' || gameState === 'eliminated' || gameState === 'picked'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-indigo-950/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
+                    <div x-show="gameState === 'winner' || gameState === 'overall_winner' || gameState === 'eliminated' || gameState === 'picked'" 
+                        x-transition:enter="transition ease-out duration-300" 
+                        x-transition:enter-start="opacity-0 scale-95" 
+                        x-transition:enter-end="opacity-100 scale-100" 
+                        class="absolute inset-0 z-50 bg-indigo-950/95 overflow-y-auto p-4 sm:p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
+                        <div class="min-h-full flex flex-col items-center justify-center py-8">
                         <div class="relative mb-8">
                             <template x-if="gameState === 'overall_winner'">
                                 <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
@@ -172,46 +174,47 @@
                             <template x-if="gameState === 'eliminated'">
                                 <div class="absolute inset-0 bg-rose-600 blur-3xl opacity-20 scale-150 rounded-full animate-pulse"></div>
                             </template>
-                            <div class="relative w-40 h-40 bg-white dark:bg-indigo-900 rounded-full flex items-center justify-center border-8 border-indigo-700 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                                <i class="fas fa-crown text-7xl text-amber-400 animate-bounce"></i>
+                            <div class="relative w-28 h-28 sm:w-40 sm:h-40 bg-white dark:bg-indigo-900 rounded-full flex items-center justify-center border-4 sm:border-8 border-indigo-700 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+                                <i class="fas fa-crown text-4xl sm:text-7xl text-amber-400 animate-bounce"></i>
                             </div>
                         </div>
                         
-                        <div class="mb-12">
+                        <div class="mb-8 sm:mb-12">
                             <template x-if="gameState === 'overall_winner'">
                                 <div>
-                                    <h2 class="text-xl font-bold text-amber-500 uppercase tracking-[0.5em] mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
-                                    <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="winnerName"></div>
-                                    <p class="text-amber-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Last Man Standing!') }}</p>
+                                    <h2 class="text-lg sm:text-xl font-bold text-amber-500 uppercase tracking-[0.2em] sm:tracking-[0.5em] mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
+                                    <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="winnerName"></div>
+                                    <p class="text-amber-400 text-base sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Last Man Standing!') }}</p>
                                 </div>
                             </template>
                             <template x-if="gameState === 'eliminated'">
                                 <div>
-                                    <h2 class="text-xl font-bold text-rose-500 uppercase tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
-                                    <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="eliminatedPlayer"></div>
-                                    <p class="text-rose-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('You are Eliminated!') }}</p>
+                                    <h2 class="text-lg sm:text-xl font-bold text-rose-500 uppercase tracking-[0.2em] sm:tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
+                                    <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="eliminatedPlayer"></div>
+                                    <p class="text-rose-400 text-sm sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('You are Eliminated!') }}</p>
                                 </div>
                             </template>
                             <template x-if="(gameState === 'picked' || gameState === 'winner') && !lmsActive">
                                 <div>
-                                    <h2 class="text-xl font-bold text-amber-500 uppercase tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
-                                    <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="lastPickedPlayer"></div>
-                                    <p class="text-amber-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('The Chosen One!') }}</p>
+                                    <h2 class="text-lg sm:text-xl font-bold text-amber-500 uppercase tracking-[0.2em] sm:tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
+                                    <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="lastPickedPlayer"></div>
+                                    <p class="text-amber-400 text-base sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('The Chosen One!') }}</p>
                                 </div>
                             </template>
                         </div>
 
                         <template x-if="gameState === 'overall_winner'">
-                            <button @click="resetRound()" class="w-full max-w-sm py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                            <button @click="resetRound()" class="w-full max-w-sm py-4 sm:py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
                                 {{ __('NEW ROUND') }}
                             </button>
                         </template>
                         <template x-if="gameState === 'eliminated' || (gameState === 'picked' || gameState === 'winner')">
-                            <button @click="resetGame()" class="w-full max-w-sm py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                            <button @click="resetGame()" class="w-full max-w-sm py-4 sm:py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
                                 <span x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('NEXT SPIN') }}'"></span>
                             </button>
                         </template>
                     </div>
+                </div>
 
                     <div class="hud" x-show="gameState === 'playing'" x-transition>
                         <button id="spin-button" {{ empty($names) ? 'disabled' : '' }}>{{ __('Spin') }}</button>
@@ -444,9 +447,21 @@
         }
 
         function setupPlayers() {
-            // Clear existing
-            stickFigures.forEach(f => pivot.remove(f));
+            // Clear existing figures from pivot safely
+            if (pivot) {
+                for (let i = pivot.children.length - 1; i >= 0; i--) {
+                    const child = pivot.children[i];
+                    // Keep the crown model, but remove stick figures
+                    if (child !== crown) {
+                        pivot.remove(child);
+                    }
+                }
+            }
             stickFigures = [];
+
+            // Explicitly remove any orphaned label DOM elements
+            // This fixes the bug where labels become "static" when figures are removed from the scene
+            document.querySelectorAll('.label').forEach(el => el.remove());
 
             if (!players || players.length === 0) return;
 
@@ -554,9 +569,10 @@
             .then(data => {
                 console.log('Fetch request successful');
                 if (data.success && data.names) {
+                    // Only re-setup players if the list has actually changed (e.g. elimination)
+                    const namesChanged = JSON.stringify(players) !== JSON.stringify(data.names);
                     players = data.names;
-                    // Re-setup players in Three.js scene
-                    if (typeof setupPlayers === 'function') {
+                    if (namesChanged && typeof setupPlayers === 'function') {
                         setupPlayers();
                     }
                 }
