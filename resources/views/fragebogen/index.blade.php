@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
             {{ __('Fragebogen') }}
         </h2>
     </x-slot>
@@ -8,19 +8,19 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="py-12" x-data="fragebogen({{ isset($sharedResult) ? json_encode($sharedResult) : 'null' }}, {{ $characterQuestions->toJson() }}, {{ $partnerQuestions->toJson() }}, {{ $showUniverse ? 'true' : 'false' }})">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+    <div class="flex-grow flex flex-col w-full relative" x-data="fragebogen({{ isset($sharedResult) ? json_encode($sharedResult) : 'null' }}, {{ $characterQuestions->toJson() }}, {{ $partnerQuestions->toJson() }}, {{ $showUniverse ? 'true' : 'false' }})">
+        <div class="flex-grow flex flex-col w-full h-full">
             <div
-                class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-gray-100 min-h-[600px] relative">
+                class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative">
 
                 <!-- Progress Bar -->
-                <div class="absolute top-0 left-0 w-full h-2 bg-gray-100 rounded-t-2xl overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gray-100 dark:bg-gray-900 rounded-t-2xl overflow-hidden">
                     <div class="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-500 ease-out"
                         :style="`width: ${progressPercentage}%`"></div>
                 </div>
 
                 <div
-                    class="p-8 sm:p-12 text-gray-900 flex flex-col items-center justify-center min-h-[600px] w-full relative overflow-hidden">
+                    class="flex-grow p-8 sm:p-12 text-gray-900 dark:text-gray-100 flex flex-col items-center justify-center min-h-[600px] w-full relative overflow-hidden transition-colors duration-300">
 
                     <!-- STEP 1: Personal Info -->
                     <template x-if="step === 1">
@@ -38,19 +38,19 @@
 
                             <div class="space-y-5">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">{{ __('First Name or Nickname') }}</label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('First Name or Nickname') }}</label>
                                     <input type="text" x-model="personalInfo.name" placeholder="E.g. Troy"
-                                        class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm py-3 px-4 transition">
+                                        class="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm py-3 px-4 transition">
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Identify as') }}</label>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Identify as') }}</label>
                                         <div class="grid grid-cols-1 gap-2">
                                             <template x-for="gender in ['Male', 'Female', 'Other']">
                                                 <button @click="personalInfo.gender = gender"
-                                                    :class="personalInfo.gender === gender ? 'bg-pink-100 border-pink-500 text-pink-700 font-semibold' : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300'"
-                                                    class="py-2 border rounded-xl transition text-xs focus:outline-none">
+                                                    :class="personalInfo.gender === gender ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-pink-300'"
+                                                    class="py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200">
                                                     <span x-text="@js(['Male' => __('Male'), 'Female' => __('Female'), 'Other' => __('Other')])[gender]"></span>
                                                 </button>
                                             </template>
@@ -58,12 +58,12 @@
                                     </div>
 
                                     <div>
-                                         <label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Looking for') }}</label>
+                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Looking for') }}</label>
                                         <div class="flex flex-col gap-2">
                                             <template x-for="seeking in ['Men', 'Women', 'Everyone']">
                                                 <button @click="personalInfo.seeking = seeking"
-                                                    :class="personalInfo.seeking === seeking ? 'bg-purple-100 border-purple-500 text-purple-700 font-semibold' : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300'"
-                                                     class="flex-1 py-2 border rounded-xl transition text-xs focus:outline-none">
+                                                    :class="personalInfo.seeking === seeking ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-300'"
+                                                     class="flex-1 py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200">
                                                     <span x-text="@js(['Men' => __('Men'), 'Women' => __('Women'), 'Everyone' => __('Everyone')])[seeking]"></span>
                                                 </button>
                                             </template>
@@ -72,12 +72,12 @@
                                 </div>
 
                                 <div>
-                                     <label class="block text-sm font-bold text-gray-800 mb-3">{{ __('Choose your Universes') }}</label>
+                                     <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{{ __('Choose your Universes') }}</label>
                                     <div class="grid grid-cols-2 gap-2 pr-1 pb-1">
                                         <template x-for="f in franchises">
                                             <button @click="toggleUniverse(f.id)"
-                                                :class="personalInfo.selectedUniverses.includes(f.id) ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'"
-                                                class="flex flex-col items-center justify-center p-3 border-2 rounded-xl transition text-center group">
+                                                :class="personalInfo.selectedUniverses.includes(f.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                                class="flex flex-col items-center justify-center p-3 border-2 rounded-xl transition text-center group transition-colors duration-200">
                                                 <span class="text-xl mb-1" x-text="f.emoji"></span>
                                                 <span class="text-[10px] font-bold uppercase truncate w-full" x-text="f.name"></span>
                                             </button>
@@ -86,17 +86,17 @@
                                 </div>
 
                                 <div class="mt-4">
-                                     <label class="block text-sm font-bold text-gray-800 mb-3">{{ __('Quiz Length') }}</label>
+                                     <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{{ __('Quiz Length') }}</label>
                                     <div class="grid grid-cols-2 gap-4">
                                         <button @click="personalInfo.quizLength = 'Short'"
-                                            :class="personalInfo.quizLength === 'Short' ? 'bg-pink-100 border-pink-500 text-pink-700' : 'bg-white border-gray-200 text-gray-500 hover:border-pink-300'"
-                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group">
+                                            :class="personalInfo.quizLength === 'Short' ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-pink-300'"
+                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200">
                                              <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">⚡</span>
                                             <span class="text-xs font-bold uppercase tracking-wider">{{ __('Short') }} (5+5)</span>
                                         </button>
                                         <button @click="personalInfo.quizLength = 'Long'"
-                                            :class="personalInfo.quizLength === 'Long' ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-white border-gray-200 text-gray-500 hover:border-purple-300'"
-                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group">
+                                            :class="personalInfo.quizLength === 'Long' ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-purple-300'"
+                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200">
                                              <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">📜</span>
                                             <span class="text-xs font-bold uppercase tracking-wider">{{ __('Long') }} (10+10)</span>
                                         </button>
@@ -121,29 +121,29 @@
                             x-transition:leave-start="opacity-100 translate-x-0"
                             x-transition:leave-end="opacity-0 -translate-x-8" class="w-full max-w-2xl text-center"
                             x-show="step === 2">
-                            <span class="text-xs font-black uppercase tracking-[0.3em] text-pink-500 mb-2 block">{{ __('Who are you?') }}</span>
+                            <span class="text-xs font-black uppercase tracking-[0.3em] text-pink-500 mb-2 block transition-all">{{ __('Who are you?') }}</span>
                             <template x-if="showUniverse && currentCharacterQuestion.universe">
-                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pink-50 text-pink-600 border border-pink-100 mb-4" x-text="currentCharacterQuestion.universe"></span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-pink-50 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400 border border-pink-100 dark:border-pink-800 mb-4 transition-all" x-text="currentCharacterQuestion.universe"></span>
                             </template>
-                            <h3 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-10 leading-tight"
+                            <h3 class="text-2xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-10 leading-tight transition-all"
                                 x-text="currentCharacterQuestion.text"></h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <template x-for="(option, index) in currentCharacterQuestion.options">
                                     <button @click="answerCharacterQuestion(option)"
-                                        class="group relative overflow-hidden bg-white border-2 border-gray-100 hover:border-pink-400 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
+                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 hover:border-pink-400 dark:hover:border-pink-500 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
                                         <div class="flex items-start gap-4">
                                             <template x-if="option.image">
-                                                <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200">
+                                                <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-600 transition-all">
                                             </template>
                                             <template x-if="!option.image">
                                                 <div class="text-3xl" x-text="option.emoji"></div>
                                             </template>
                                             <div>
-                                                <h4 class="font-bold text-gray-800 text-lg mb-1 group-hover:text-pink-600 transition"
+                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition"
                                                     x-text="option.label"></h4>
                                                 <template x-if="option.description">
-                                                    <p class="text-sm text-gray-500" x-text="option.description"></p>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400 transition" x-text="option.description"></p>
                                                 </template>
                                             </div>
                                         </div>
@@ -162,29 +162,29 @@
                             x-transition:leave-start="opacity-100 translate-x-0"
                             x-transition:leave-end="opacity-0 -translate-x-8" class="w-full max-w-2xl text-center"
                             x-show="step === 3">
-                            <span class="text-xs font-black uppercase tracking-[0.3em] text-purple-500 mb-2 block">{{ __('What do you want?') }}</span>
+                            <span class="text-xs font-black uppercase tracking-[0.3em] text-purple-500 mb-2 block transition-all">{{ __('What do you want?') }}</span>
                             <template x-if="showUniverse && currentPartnerQuestion.universe">
-                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-purple-50 text-purple-600 border border-purple-100 mb-4" x-text="currentPartnerQuestion.universe"></span>
+                              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-800 mb-4 transition-all" x-text="currentPartnerQuestion.universe"></span>
                             </template>
-                            <h3 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-10 leading-tight"
+                            <h3 class="text-2xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-10 leading-tight transition-all"
                                 x-text="currentPartnerQuestion.text"></h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <template x-for="(option, index) in currentPartnerQuestion.options">
                                     <button @click="answerPartnerQuestion(option)"
-                                        class="group relative overflow-hidden bg-white border-2 border-gray-100 hover:border-purple-400 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
+                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
                                         <div class="flex items-start gap-4">
                                             <template x-if="option.image">
-                                                <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200">
+                                                <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-600 transition-all">
                                             </template>
                                             <template x-if="!option.image">
                                                 <div class="text-3xl" x-text="option.emoji"></div>
                                             </template>
                                             <div>
-                                                <h4 class="font-bold text-gray-800 text-lg mb-1 group-hover:text-purple-600 transition"
+                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition"
                                                     x-text="option.label"></h4>
                                                 <template x-if="option.description">
-                                                    <p class="text-sm text-gray-500" x-text="option.description"></p>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400 transition" x-text="option.description"></p>
                                                 </template>
                                             </div>
                                         </div>
@@ -203,17 +203,17 @@
 
                             <div class="text-center mb-10">
                                 <h2
-                                    class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-4">
+                                    class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-4 transition-all">
                                     {{ __('The Verdict') }}</h2>
-                                <p class="text-lg text-gray-600">{{ __('Based on our highly scientific algorithm,') }} <span
-                                        class="font-bold text-gray-900" x-text="personalInfo.name"></span>, {{ __('here is your dating profile breakdown!') }}</p>
+                                <p class="text-lg text-gray-600 dark:text-gray-400 transition-all">{{ __('Based on our highly scientific algorithm,') }} <span
+                                        class="font-bold text-gray-900 dark:text-white" x-text="personalInfo.name"></span>, {{ __('here is your dating profile breakdown!') }}</p>
                             </div>
 
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                                 <!-- LEFT COL: Chart -->
                                 <div
-                                    class="bg-gray-50 p-6 rounded-3xl shadow-inner relative flex flex-col items-center justify-center min-h-[400px]">
-                                    <h3 class="text-sm font-bold uppercase text-gray-500 mb-6 tracking-widest">{{ __('Your Vibe Matrix') }}</h3>
+                                    class="bg-gray-50 dark:bg-gray-900/40 p-6 rounded-3xl shadow-inner relative flex flex-col items-center justify-center min-h-[400px] border border-transparent dark:border-gray-700 transition-all">
+                                    <h3 class="text-sm font-bold uppercase text-gray-500 dark:text-gray-400 mb-6 tracking-widest">{{ __('Your Vibe Matrix') }}</h3>
                                     <div class="w-full max-w-md w-full relative">
                                         <canvas id="spiderChart"></canvas>
                                     </div>
@@ -221,43 +221,43 @@
 
                                 <!-- RIGHT COL: Analysis & Mapping -->
                                 <div class="flex flex-col justify-center space-y-8">
-                                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] rounded-3xl shadow-xl">
-                                        <div class="bg-white rounded-[calc(1.5rem-2px)] p-6">
+                                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] rounded-3xl shadow-xl transition-all">
+                                        <div class="bg-white dark:bg-gray-800 rounded-[calc(1.5rem-2px)] p-6 transition-all duration-300">
                                             <div class="flex items-center gap-4 mb-4">
-                                                <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-3xl shadow-inner" x-text="getCharEmoji()"></div>
+                                                <div class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-3xl shadow-inner transition-all" x-text="getCharEmoji()"></div>
                                                 <div>
-                                                    <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-400">{{ __('Character Match') }}</span>
-                                                    <h3 class="text-2xl font-black text-gray-900 leading-tight" x-text="mappedCharacter"></h3>
+                                                    <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-400 dark:text-indigo-300">{{ __('Character Match') }}</span>
+                                                    <h3 class="text-2xl font-black text-gray-900 dark:text-white leading-tight transition-all" x-text="mappedCharacter"></h3>
                                                 </div>
                                             </div>
-                                            <p class="text-gray-700 leading-relaxed italic border-l-4 border-indigo-100 pl-4" x-text="characterAnalysis"></p>
+                                            <p class="text-gray-700 dark:text-gray-300 leading-relaxed italic border-l-4 border-indigo-100 dark:border-indigo-900/50 pl-4 transition-all" x-text="characterAnalysis"></p>
                                         </div>
                                     </div>
 
-                                    <div class="bg-pink-50/50 p-6 rounded-2xl border border-pink-100">
+                                    <div class="bg-pink-50/50 dark:bg-pink-900/10 p-6 rounded-2xl border border-pink-100 dark:border-pink-900/30 transition-all">
                                         <div class="flex items-center gap-3 mb-2">
                                             <span class="text-xl">💪</span>
-                                            <h3 class="text-lg font-bold text-pink-900">{{ __('Greatest Strengths') }}</h3>
+                                            <h3 class="text-lg font-bold text-pink-900 dark:text-pink-300">{{ __('Greatest Strengths') }}</h3>
                                         </div>
-                                        <p class="text-pink-800 leading-relaxed text-sm" x-text="strengthsSummary"></p>
+                                        <p class="text-pink-800 dark:text-pink-400 leading-relaxed text-sm transition-all" x-text="strengthsSummary"></p>
                                     </div>
 
-                                    <div class="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
+                                    <div class="bg-purple-50/50 dark:bg-purple-900/10 p-6 rounded-2xl border border-purple-100 dark:border-purple-900/30 transition-all">
                                         <div class="flex items-center gap-3 mb-2">
                                             <span class="text-xl">❤️</span>
-                                            <h3 class="text-lg font-bold text-purple-900">{{ __('Your Perfect Match') }}</h3>
+                                            <h3 class="text-lg font-bold text-purple-900 dark:text-purple-300">{{ __('Your Perfect Match') }}</h3>
                                         </div>
-                                        <p class="text-purple-800 leading-relaxed text-sm" x-text="perfectMatchSummary"></p>
+                                        <p class="text-purple-800 dark:text-purple-400 leading-relaxed text-sm transition-all" x-text="perfectMatchSummary"></p>
                                     </div>
 
                                     <template x-if="shareUrl">
-                                        <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                                        <div class="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-all">
                                             <div class="flex items-center gap-3 mb-3">
                                                 <span class="text-xl">🔗</span>
-                                                <h3 class="text-lg font-bold text-indigo-900">Share your Result</h3>
+                                                <h3 class="text-lg font-bold text-indigo-900 dark:text-indigo-300">{{ __('Share your Result') }}</h3>
                                             </div>
                                             <div class="flex gap-2">
-                                                <input type="text" readonly :value="shareUrl" class="flex-1 text-xs border-gray-200 rounded-lg bg-white px-3 py-2 text-gray-600 focus:ring-0">
+                                                <input type="text" readonly :value="shareUrl" class="flex-1 text-xs border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 px-3 py-2 text-gray-600 dark:text-gray-300 focus:ring-0 transition-all">
                                                 <button @click="navigator.clipboard.writeText(shareUrl); alert('Link copied!')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-indigo-700 transition">Copy</button>
                                             </div>
                                         </div>
@@ -620,10 +620,11 @@
                         this.chartInstance.destroy();
                     }
 
-                    const ctx = document.getElementById('spiderChart').getContext('2d');
-
-                    const labels = Object.keys(this.traits);
-                    const dataPoints = Object.values(this.traits);
+                    const isDark = document.documentElement.classList.contains('dark') || 
+                                   (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    
+                    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                    const labelColor = isDark ? '#9CA3AF' : '#4B5563';
 
                     this.chartInstance = new Chart(ctx, {
                         type: 'radar',
@@ -632,13 +633,13 @@
                             datasets: [{
                                 label: 'Your Personality Vibe',
                                 data: dataPoints,
-                                backgroundColor: 'rgba(236, 72, 153, 0.2)', // Pink 500 with opacity
-                                borderColor: 'rgba(236, 72, 153, 1)',
-                                pointBackgroundColor: 'rgba(168, 85, 247, 1)', // Purple 500
+                                backgroundColor: isDark ? 'rgba(244, 114, 182, 0.25)' : 'rgba(236, 72, 153, 0.2)', 
+                                borderColor: isDark ? 'rgba(244, 114, 182, 1)' : 'rgba(236, 72, 153, 1)',
+                                pointBackgroundColor: 'rgba(168, 85, 247, 1)', 
                                 pointBorderColor: '#fff',
                                 pointHoverBackgroundColor: '#fff',
                                 pointHoverBorderColor: 'rgba(168, 85, 247, 1)',
-                                borderWidth: 2,
+                                borderWidth: 3,
                                 fill: true,
                             }]
                         },
@@ -648,10 +649,10 @@
                             scales: {
                                 r: {
                                     angleLines: {
-                                        color: 'rgba(0, 0, 0, 0.1)'
+                                        color: gridColor
                                     },
                                     grid: {
-                                        color: 'rgba(0, 0, 0, 0.1)'
+                                        color: gridColor
                                     },
                                     pointLabels: {
                                         font: {
@@ -659,20 +660,20 @@
                                             size: 13,
                                             weight: 'bold'
                                         },
-                                        color: '#4B5563' // Gray 600
+                                        color: labelColor
                                     },
                                     ticks: {
-                                        display: false // hide the numbers
+                                        display: false 
                                     },
                                     beginAtZero: true
                                 }
                             },
                             plugins: {
                                 legend: {
-                                    display: false // Hide legend to make it cleaner
+                                    display: false 
                                 },
                                 tooltip: {
-                                    backgroundColor: 'rgba(17, 24, 39, 0.8)',
+                                    backgroundColor: isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(17, 24, 39, 0.8)',
                                     titleFont: { family: "'Figtree', sans-serif", size: 14 },
                                     bodyFont: { family: "'Figtree', sans-serif", size: 13 },
                                     padding: 12,

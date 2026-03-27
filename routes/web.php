@@ -49,6 +49,7 @@ Route::post('/tools/players/update', [ToolController::class, 'updatePlayers'])->
 Route::post('/tools/save-winner', [ToolController::class, 'saveWinner'])->name('tools.save-winner');
 Route::post('/tools/toggle-lms', [ToolController::class, 'toggleLms'])->name('tools.toggle-lms');
 Route::post('/tools/reset-lms', [ToolController::class, 'resetLms'])->name('tools.reset-lms');
+Route::post('/tools/toggle-shuffle', [ToolController::class, 'toggleShuffle'])->name('tools.toggle-shuffle');
 
 Route::get('/fragebogen', [FragebogenController::class, 'index'])->name('fragebogen.index');
 Route::post('/fragebogen/save', [FragebogenController::class, 'store'])->name('fragebogen.store');

@@ -1,6 +1,6 @@
-@props(['route' => 'games.index', 'reset' => false, 'hidePlayers' => false])
+@props(['route' => 'games.index', 'reset' => false, 'hidePlayers' => false, 'backToGame' => false])
 
-<div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-white/50 dark:bg-gray-800/50 backdrop-blur-md sticky top-0 z-40">
+<div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-white/50 dark:bg-gray-800/50 backdrop-blur-md sticky top-0 z-40 transition-colors duration-300">
     <div class="flex items-center gap-4">
         <a href="{{ route($route) }}" class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all duration-300 group" title="Back">
             <i class="fas fa-chevron-left text-lg group-hover:-translate-x-1 transition-transform"></i>
@@ -11,6 +11,12 @@
     </div>
 
     <div class="flex items-center gap-2 sm:gap-3">
+        @if($backToGame)
+            <a href="{{ route($backToGame) }}" class="inline-flex items-center px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-black rounded-xl transition duration-300 shadow-xl shadow-black/10 active:scale-95 uppercase tracking-tighter mr-2">
+                <i class="fas fa-play mr-2 text-[10px]"></i>
+                {{ __('Back to Game') }}
+            </a>
+        @endif
         @if($reset)
             <button @click="{{ $reset }}" class="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all duration-300" title="Reset Game">
                 <i class="fas fa-redo-alt"></i>
@@ -32,7 +38,7 @@
                 }).then(() => window.location.reload());
             }
         }" class="flex items-center">
-            <button @click="toggleLms()" :class="lmsActive ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'" class="flex items-center gap-2 p-2 sm:px-3 rounded-xl transition-all duration-300" :title="lmsActive ? 'Disable Last Man Standing' : 'Enable Last Man Standing'">
+            <button @click="toggleLms()" :class="lmsActive ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-black' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'" class="flex items-center gap-2 p-2 sm:px-3 rounded-xl transition-all duration-300" :title="lmsActive ? 'Disable Last Man Standing' : 'Enable Last Man Standing'">
                 <i class="fas fa-skull-crossbones text-lg"></i>
                 <span class="hidden sm:inline font-bold text-xs uppercase tracking-wider" x-text="lmsActive ? 'LMS ON' : 'LMS OFF'"></span>
             </button>

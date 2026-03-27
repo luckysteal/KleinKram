@@ -1,22 +1,31 @@
-<div x-data="playerManager()" x-init="init()" class="flex flex-col h-full">
+<div x-data="playerManager()" x-init="init()" {{ $attributes->merge(['class' => 'flex flex-col h-full']) }}>
     <!-- Header with quick stats -->
     <div class="flex flex-row items-center justify-between mb-6">
         <div>
             <h3 class="text-xl font-black text-gray-900 dark:text-white">{{ __('Players') }}</h3>
             <p class="text-xs text-gray-500 dark:text-gray-400 font-medium"><span x-text="players.length" class="text-indigo-500 italic"></span> {{ __('total registered') }}</p>
         </div>
-        <button type="button" @click="addPlayer()" class="inline-flex items-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold rounded-2xl transition shadow-md shadow-indigo-500/20">
-            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
-            </svg>
-            {{ __('Add') }}
-        </button>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+            <button type="button" @click="toggleShuffle()" 
+                :class="shuffleActive ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'" 
+                class="inline-flex items-center px-4 py-2 text-xs font-black rounded-xl transition shadow-sm uppercase tracking-widest border border-transparent"
+                :disabled="isTogglingShuffle">
+                <i class="fas fa-random mr-2" :class="shuffleActive ? 'animate-pulse' : ''"></i>
+                <span x-text="shuffleActive ? '{{ __('Shuffle: ON') }}' : '{{ __('Shuffle: OFF') }}'"></span>
+            </button>
+            <button type="button" @click="addPlayer()" class="inline-flex items-center px-4 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-bold rounded-2xl transition shadow-md shadow-indigo-500/20">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path>
+                </svg>
+                {{ __('Add') }}
+            </button>
+        </div>
     </div>
 
     <!-- Active Player List - Scrollable on small screens if long -->
     <div class="space-y-3 mb-8">
         <template x-for="(player, index) in players" :key="index">
-            <div class="relative bg-gray-50/80 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600/50 rounded-2xl overflow-hidden transition-all hover:border-indigo-400/50">
+            <div class="relative bg-gray-50/80 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-600/50 rounded-2xl overflow-hidden transition-all hover:border-indigo-400/50 duration-300">
                 <div class="flex items-center p-1 px-3">
                     <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-black text-xs" x-text="index + 1"></div>
                     <input type="text" 
@@ -65,18 +74,47 @@
                 players: [],
                 lastWinner: null,
                 isSaving: false,
+                shuffleActive: false,
+                isTogglingShuffle: false,
 
                 init() {
+                    const rootEl = this.$el.closest('[data-initial-players]');
+                    this.shuffleActive = rootEl?.dataset.initialShuffle === 'true';
+
                     const stored = sessionStorage.getItem('players_draft');
                     if (stored) {
                         this.players = JSON.parse(stored);
                     } else {
-                        const rootEl = this.$el.closest('[data-initial-players]');
                         this.players = JSON.parse(rootEl?.dataset.initialPlayers || '[]');
                     }
                     this.$watch('players', () => {
                         this.saveToSessionStorage();
                     });
+                },
+
+                async toggleShuffle() {
+                    if (this.isTogglingShuffle) return;
+                    this.isTogglingShuffle = true;
+                    
+                    const newState = !this.shuffleActive;
+                    try {
+                        const response = await fetch('{{ route('tools.toggle-shuffle') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ active: newState })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.shuffleActive = data.shuffle_active;
+                        }
+                    } catch (e) {
+                        console.error('Shuffle toggle failed', e);
+                    } finally {
+                        this.isTogglingShuffle = false;
+                    }
                 },
 
                 addPlayer() {

@@ -27,7 +27,9 @@ class ToolController extends Controller
     {
         return view('tools.player-selection', [
             'names' => Session::get('players_list', []),
-            'winnersTally' => Session::get('winners_tally', [])
+            'winnersTally' => Session::get('winners_tally', []),
+            'lastGameRoute' => Session::get('last_game_route'),
+            'shuffleActive' => Session::get('shuffle_active', false)
         ]);
     }
 
@@ -58,6 +60,18 @@ class ToolController extends Controller
         $eliminated = Session::get('eliminated_players', []);
         $overallWinner = Session::get('lms_overall_winner');
 
+        // Record last played game
+        $currentRoute = request()->route()->getName();
+        if (in_array($currentRoute, [
+            'tools.spinning-crown',
+            'tools.hi-low',
+            'tools.ticking-bomb',
+            'tools.russian-roulette',
+            'tools.snake-pit'
+        ])) {
+            Session::put('last_game_route', $currentRoute);
+        }
+
         if ($lmsActive) {
             $players = array_values(array_diff($players, $eliminated));
             
@@ -69,6 +83,7 @@ class ToolController extends Controller
             'names' => $players,
             'winnersTally' => Session::get('winners_tally', []),
             'lmsActive' => $lmsActive,
+            'shuffleActive' => Session::get('shuffle_active', false),
             'eliminated' => $eliminated,
             'overallWinner' => $overallWinner
         ];
@@ -131,7 +146,45 @@ class ToolController extends Controller
             }
         }
 
-        return response()->json(['success' => true]);
+        // Handle shuffle after every round
+        if (Session::get('shuffle_active', false)) {
+            $players = Session::get('players_list', []);
+            if (count($players) > 1) {
+                $maxAttempts = 50;
+                $shuffled = false;
+                
+                for ($i = 0; $i < $maxAttempts; $i++) {
+                    shuffle($players);
+                    
+                    // 1. Ensure the person who just act (winner/loser) is not at index 0 
+                    //    (assuming new rounds/turns often start or reset towards index 0)
+                    if ($players[0] === $winner) continue;
+                    
+                    // 2. Ensure no two identical names are adjacent (in case of duplicate entries)
+                    $hasAdjacentDuplicates = false;
+                    for ($j = 0; $j < count($players) - 1; $j++) {
+                        if ($players[$j] === $players[$j+1]) {
+                            $hasAdjacentDuplicates = true;
+                            break;
+                        }
+                    }
+                    if ($hasAdjacentDuplicates) continue;
+                    
+                    $shuffled = true;
+                    break;
+                }
+                
+                if ($shuffled) {
+                    Session::put('players_list', $players);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'names' => Session::get('players_list', []),
+            'shuffle_active' => Session::get('shuffle_active', false)
+        ]);
     }
 
     public function toggleLms(Request $request)
@@ -151,5 +204,12 @@ class ToolController extends Controller
         Session::forget('eliminated_players');
         Session::forget('lms_overall_winner');
         return response()->json(['success' => true]);
+    }
+
+    public function toggleShuffle(Request $request)
+    {
+        $active = (bool)$request->input('active', false);
+        Session::put('shuffle_active', $active);
+        return response()->json(['success' => true, 'shuffle_active' => $active]);
     }
 }
