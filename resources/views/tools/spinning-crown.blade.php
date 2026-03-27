@@ -5,15 +5,16 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="crownGame()">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+    <div class="flex-grow flex flex-col w-full relative" x-data="crownGame()">
+        <div class="flex-grow flex flex-col w-full">
 
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300">
                 <style>
                     #game-container {
                         position: relative;
                         width: 100%;
-                        height: 600px;
+                        flex-grow: 1;
+                        min-height: 400px;
                         background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%);
                         font-family: 'Montserrat', sans-serif;
                         color: #fff;
@@ -143,7 +144,7 @@
                     <div id="canvas-container"></div>
                     
                     @if(empty($names))
-                    <div id="no-players-overlay" class="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center sm:rounded-3xl">
+                    <div id="no-players-overlay" class="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
                         <div class="bg-indigo-600/20 border border-indigo-500/50 p-8 rounded-2xl max-w-md">
                             <svg class="w-16 h-16 text-indigo-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -160,7 +161,7 @@
                     @endif
 
                     <!-- Winner Overlay (Standard and LMS) -->
-                    <div x-show="gameState === 'winner' || gameState === 'overall_winner' || gameState === 'eliminated' || gameState === 'picked'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-indigo-950/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl sm:rounded-3xl">
+                    <div x-show="gameState === 'winner' || gameState === 'overall_winner' || gameState === 'eliminated' || gameState === 'picked'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-indigo-950/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
                         <div class="relative mb-8">
                             <template x-if="gameState === 'overall_winner'">
                                 <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
@@ -549,8 +550,16 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                 },
                 body: JSON.stringify({ winner: winner })
-            }).then(() => {
+            }).then(response => response.json())
+            .then(data => {
                 console.log('Fetch request successful');
+                if (data.success && data.names) {
+                    players = data.names;
+                    // Re-setup players in Three.js scene
+                    if (typeof setupPlayers === 'function') {
+                        setupPlayers();
+                    }
+                }
                 try {
                     const noWinsText = document.getElementById('no-wins-text');
                     console.log('noWinsText element:', noWinsText);

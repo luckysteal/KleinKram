@@ -5,9 +5,9 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="hiLowGame()">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-xl sm:rounded-2xl relative">
+    <div class="flex-grow flex flex-col w-full relative" x-data="hiLowGame()">
+        <div class="flex-grow flex flex-col w-full h-full">
+            <div class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative overflow-hidden">
                 
                 <x-game-header reset="resetGame()">
                      <h3 class="text-xl sm:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 uppercase tracking-tighter">{{ __('Hi-Low') }}</h3>
@@ -15,7 +15,7 @@
                 </x-game-header>
 
                 <!-- Main Game Area -->
-                <div class="p-8 min-h-[400px] flex flex-col items-center justify-center space-y-8">
+                <div class="p-8 flex-grow flex flex-col items-center justify-center space-y-8">
                     
                     <template x-if="players.length === 0">
                         <div class="text-center space-y-6">
@@ -77,7 +77,7 @@
                 </div>
 
                 <!-- Picked State (End Screen Redesign) - Standard and LMS -->
-                <div x-show="gameState === 'picked' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-white/95 dark:bg-gray-800/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-md sm:rounded-3xl">
+                <div x-show="gameState === 'picked' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-white/95 dark:bg-gray-800/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-md transition-colors duration-300">
                     <div class="relative mb-8">
                         <template x-if="gameState === 'overall_winner'">
                             <div class="absolute inset-0 bg-amber-400 blur-2xl opacity-20 rounded-full animate-pulse scale-150"></div>
@@ -211,6 +211,8 @@
                     this.currentNumber = Math.floor(Math.random() * 28);
                     this.history = [this.currentNumber];
                     this.nextNumber = null;
+                    // Start from the beginning of the list 
+                    this.currentPlayerIndex = 0;
                 },
 
                 resetRound() {
@@ -231,7 +233,11 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({ winner: winner })
-                    }).then(() => {
+                    }).then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.names) {
+                            this.players = data.names;
+                        }
                         this.updateScoreboard(winner);
                     }).catch(e => console.error('Failed to save winner', e));
                 },

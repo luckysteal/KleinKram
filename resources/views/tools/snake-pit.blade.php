@@ -5,9 +5,9 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="snakePitGame()">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-2xl sm:rounded-[2.5rem] overflow-hidden relative min-h-[600px] flex flex-col border border-gray-100 dark:border-gray-700">
+    <div class="flex-grow flex flex-col w-full relative" x-data="snakePitGame()">
+        <div class="flex-grow flex flex-col w-full h-full">
+            <div class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative min-h-[600px] border border-gray-100 dark:border-gray-700">
 
                 
                 <x-game-header reset="resetGame()">
@@ -78,7 +78,7 @@
                 </div>
 
                 <!-- Bitten State (End Screen) - Moved out to cover whole card -->
-                <div x-show="gameState === 'bitten' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-emerald-950 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl sm:rounded-[2.5rem]">
+                <div x-show="gameState === 'bitten' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-emerald-950 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
                     <div class="relative mb-12">
                         <template x-if="gameState === 'overall_winner'">
                             <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
@@ -190,8 +190,8 @@
                     }
                     this.gameState = 'playing';
                     this.setupGrid();
-                    // Starter advances
-                    this.nextPlayer();
+                    // Start from the beginning for the new round
+                    this.currentPlayerIndex = 0;
                 },
 
                 resetRound() {
@@ -212,7 +212,11 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({ winner: winner })
-                    }).then(() => {
+                    }).then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.names) {
+                            this.players = data.names;
+                        }
                         this.updateScoreboard(winner);
                     }).catch(e => console.error('Snake bit the server:', e));
                 },

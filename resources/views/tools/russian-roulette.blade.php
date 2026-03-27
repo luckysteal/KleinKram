@@ -5,9 +5,9 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="rouletteGame()">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 shadow-2xl sm:rounded-3xl relative overflow-hidden flex flex-col min-h-[500px]">
+    <div class="flex-grow flex flex-col w-full relative" x-data="rouletteGame()">
+        <div class="flex-grow flex flex-col w-full">
+            <div class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative overflow-hidden min-h-[500px]">
                 
                 <x-game-header reset="resetGame()">
                     <h3 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">{{ __('Deadly Roulette') }}</h3>
@@ -88,7 +88,7 @@
                 </div>
 
                 <!-- Fatal State (End Screen Redesign) - Standard and LMS -->
-                <div x-show="gameState === 'deadly' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-white overflow-hidden text-center sm:rounded-3xl">
+                <div x-show="gameState === 'deadly' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-white overflow-hidden text-center transition-colors duration-300">
                     <!-- Cracked Screen Effect / Overlays -->
                     <div class="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_center,_transparent_0%,_black_100%)]"></div>
                     <div class="absolute inset-0 pointer-events-none opacity-20 bg-[url('https://www.transparenttextures.com/patterns/broken-noise.png')]"></div>
@@ -249,7 +249,8 @@
                     this.chambersCompleted = 0;
                     this.reloadCylinder();
                     this.logs = [];
-                    this.nextPlayer();
+                    // Start from the beginning of the list for the fresh round
+                    this.currentPlayerIndex = 0;
                 },
 
                 resetRound() {
@@ -270,7 +271,11 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({ winner: winner })
-                    }).then(() => {
+                    }).then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.names) {
+                            this.players = data.names;
+                        }
                         this.updateScoreboard(winner);
                     }).catch(e => console.error('Error saving', e));
                 },
