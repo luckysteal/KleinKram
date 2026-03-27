@@ -21,6 +21,7 @@ class Page extends Model
         'german_tax_enabled',
         'church_tax_enabled',
         'badges',
+        'show_dating_universe',
     ];
 
     protected $casts = [

@@ -70,7 +70,7 @@
                     <p class="mb-4">{{ __('With your yearly brutto money, you can buy:') }}</p>
                 @endif
                 <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">{{ $numberOfDrinks }} x {{ $drink->name }} ({{ __('yearly') }})</p>
-                <p class="text-base">at <span class="font-semibold">{{ $drink->bar->name }}</span></p>
+                <p class="text-base">{{ __('at') }} <span class="font-semibold">{{ $drink->bar->name }}</span></p>
                 <p class="mt-4">{{ __('Remaining money') }}: <span class="font-semibold">€{{ number_format($remainingMoney, 2) }}</span> ({{ __('yearly') }})</p>
 
                 @if(!empty($daysPerWeek) && $numberOfDrinksPerVisit > 0)
@@ -91,7 +91,7 @@
                     " class="mt-2 inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                         {{ __('Copy Link') }}
                     </button>
-                    <span class="text-sm text-green-600 ml-2 hidden" x-ref="copiedMessage">Copied!</span>
+                    <span class="text-sm text-green-600 ml-2 hidden" x-ref="copiedMessage">{{ __('Copied!') }}</span>
                 </div>
                 <div class="ml-4 mt-auto">
                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Start a new calculation:') }}</p>

@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\BarController;
 use App\Http\Controllers\Admin\DrinkController;
+use App\Http\Controllers\Admin\DatingMatchResultController;
+use App\Http\Controllers\Admin\DatingQuestionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -11,4 +13,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     Route::resource('bars', BarController::class);
     Route::resource('drinks', DrinkController::class);
+    Route::resource('dating-match-results', DatingMatchResultController::class);
+    Route::resource('dating-questions', DatingQuestionController::class);
 });

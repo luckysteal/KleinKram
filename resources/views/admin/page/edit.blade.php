@@ -34,6 +34,11 @@
             <label for="church_tax_enabled" class="ml-2 text-sm text-gray-700">Apply Church Tax</label>
         </div>
 
+        <div class="mb-4">
+            <input type="checkbox" name="show_dating_universe" id="show_dating_universe" value="1" {{ $page->show_dating_universe ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+            <label for="show_dating_universe" class="ml-2 text-sm text-gray-700">Show 'Universe' context in Fragebogen</label>
+        </div>
+
         <h2 class="text-xl font-bold text-gray-800 mb-4">Manage Badges</h2>
 
         <div x-data="{ badges: {{ json_encode($page->badges ?? []) }} }">

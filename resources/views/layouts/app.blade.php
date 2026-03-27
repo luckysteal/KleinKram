@@ -11,6 +11,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -20,7 +23,7 @@
 
             <!-- Page Heading -->
             @if (isset($header))
-                <header class="bg-white shadow">
+                <header class="bg-white dark:bg-gray-800 shadow">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
@@ -31,6 +34,21 @@
             <main class="flex-grow relative">
                 {{ $slot }}
             </main>
+
+            @php
+                $layoutWinnersTally = $winnersTally ?? session('winners_tally', []);
+                // For the scoreboard, we want the full list of players to show their alive/eliminated status
+                $layoutFullPlayersList = session('players_list', []);
+                $layoutLmsActive = $lmsActive ?? session('lms_active', false);
+                $layoutEliminatedPlayers = $eliminated ?? session('eliminated_players', []);
+            @endphp
+
+            <x-game-scoreboard 
+                :winners-tally="$layoutWinnersTally" 
+                :players-list="$layoutFullPlayersList"
+                :lms-active="$layoutLmsActive"
+                :eliminated-players="$layoutEliminatedPlayers"
+            />
         </div>
     </body>
 </html>
