@@ -1,17 +1,27 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Fragebogen') }}
-        </h2>
-    </x-slot>
 
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <div class="flex-grow flex flex-col w-full relative" x-data="fragebogen({{ isset($sharedResult) ? json_encode($sharedResult) : 'null' }}, {{ $characterQuestions->toJson() }}, {{ $partnerQuestions->toJson() }}, {{ $showUniverse ? 'true' : 'false' }})">
         <div class="flex-grow flex flex-col w-full h-full">
-            <div
-                class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative">
+                <style>
+                    [x-cloak] { display: none !important; }
+                    @media (hover: hover) {
+                        .hover-trigger:hover {
+                            border-color: var(--tw-hover-border) !important;
+                            transform: translateY(-4px) !important;
+                            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+                        }
+                        .hover-trigger:hover .hover-text {
+                            color: var(--tw-hover-text) !important;
+                        }
+                    }
+                    .select-none { user-select: none; -webkit-user-select: none; }
+                </style>
+                <div
+                    class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative select-none"
+                    style="-webkit-tap-highlight-color: transparent;">
 
                 <!-- Progress Bar -->
                 <div class="absolute top-0 left-0 w-full h-2 bg-gray-100 dark:bg-gray-900 rounded-t-2xl overflow-hidden">
@@ -48,9 +58,10 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Identify as') }}</label>
                                         <div class="grid grid-cols-1 gap-2">
                                             <template x-for="gender in ['Male', 'Female', 'Other']">
-                                                <button @click="personalInfo.gender = gender"
-                                                    :class="personalInfo.gender === gender ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-pink-300'"
-                                                    class="py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200">
+                                                <button @click="personalInfo.gender = gender; $el.blur()"
+                                                    :class="personalInfo.gender === gender ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'"
+                                                    class="py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200 active:scale-95 hover-trigger"
+                                                    style="--tw-hover-border: #f9a8d4;">
                                                     <span x-text="@js(['Male' => __('Male'), 'Female' => __('Female'), 'Other' => __('Other')])[gender]"></span>
                                                 </button>
                                             </template>
@@ -61,9 +72,10 @@
                                          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Looking for') }}</label>
                                         <div class="flex flex-col gap-2">
                                             <template x-for="seeking in ['Men', 'Women', 'Everyone']">
-                                                <button @click="personalInfo.seeking = seeking"
-                                                    :class="personalInfo.seeking === seeking ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-purple-300'"
-                                                     class="flex-1 py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200">
+                                                <button @click="personalInfo.seeking = seeking; $el.blur()"
+                                                    :class="personalInfo.seeking === seeking ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400 font-semibold' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'"
+                                                     class="flex-1 py-2 border rounded-xl transition text-xs focus:outline-none transition-colors duration-200 active:scale-95 hover-trigger"
+                                                     style="--tw-hover-border: #d8b4fe;">
                                                     <span x-text="@js(['Men' => __('Men'), 'Women' => __('Women'), 'Everyone' => __('Everyone')])[seeking]"></span>
                                                 </button>
                                             </template>
@@ -74,10 +86,11 @@
                                 <div>
                                      <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{{ __('Choose your Universes') }}</label>
                                     <div class="grid grid-cols-2 gap-2 pr-1 pb-1">
-                                        <template x-for="f in franchises">
-                                            <button @click="toggleUniverse(f.id)"
-                                                :class="personalInfo.selectedUniverses.includes(f.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-                                                class="flex flex-col items-center justify-center p-3 border-2 rounded-xl transition text-center group transition-colors duration-200">
+                                         <template x-for="f in franchises">
+                                            <button @click="toggleUniverse(f.id); $el.blur()"
+                                                :class="personalInfo.selectedUniverses.includes(f.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'"
+                                                class="flex flex-col items-center justify-center p-3 border-2 rounded-xl transition text-center group transition-colors duration-200 active:scale-95 hover-trigger"
+                                                style="--tw-hover-border: #a5b4fc;">
                                                 <span class="text-xl mb-1" x-text="f.emoji"></span>
                                                 <span class="text-[10px] font-bold uppercase truncate w-full" x-text="f.name"></span>
                                             </button>
@@ -88,15 +101,17 @@
                                 <div class="mt-4">
                                      <label class="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">{{ __('Quiz Length') }}</label>
                                     <div class="grid grid-cols-2 gap-4">
-                                        <button @click="personalInfo.quizLength = 'Short'"
-                                            :class="personalInfo.quizLength === 'Short' ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-pink-300'"
-                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200">
+                                         <button @click="personalInfo.quizLength = 'Short'; $el.blur()"
+                                            :class="personalInfo.quizLength === 'Short' ? 'bg-pink-100 dark:bg-pink-900/30 border-pink-500 text-pink-700 dark:text-pink-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'"
+                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200 active:scale-95 hover-trigger"
+                                            style="--tw-hover-border: #f472b6;">
                                              <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">⚡</span>
                                             <span class="text-xs font-bold uppercase tracking-wider">{{ __('Short') }} (5+5)</span>
                                         </button>
-                                        <button @click="personalInfo.quizLength = 'Long'"
-                                            :class="personalInfo.quizLength === 'Long' ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-purple-300'"
-                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200">
+                                        <button @click="personalInfo.quizLength = 'Long'; $el.blur()"
+                                            :class="personalInfo.quizLength === 'Long' ? 'bg-purple-100 dark:bg-purple-900/30 border-purple-500 text-purple-700 dark:text-purple-400' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'"
+                                            class="flex flex-col items-center justify-center p-4 border-2 rounded-2xl transition shadow-sm group transition-colors duration-200 active:scale-95 hover-trigger"
+                                            style="--tw-hover-border: #c084fc;">
                                              <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">📜</span>
                                             <span class="text-xs font-bold uppercase tracking-wider">{{ __('Long') }} (10+10)</span>
                                         </button>
@@ -129,9 +144,10 @@
                                 x-text="currentCharacterQuestion.text"></h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <template x-for="(option, index) in currentCharacterQuestion.options">
-                                    <button @click="answerCharacterQuestion(option)"
-                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 hover:border-pink-400 dark:hover:border-pink-500 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
+                                <template x-for="(option, index) in currentCharacterQuestion.options" :key="currentCharacterQuestion.id + '-' + index">
+                                    <button @click="answerCharacterQuestion(option); $el.blur()"
+                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm focus:outline-none transform active:scale-95 hover-trigger"
+                                        style="--tw-hover-border: #f472b6; --tw-hover-text: #db2777;">
                                         <div class="flex items-start gap-4">
                                             <template x-if="option.image">
                                                 <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-600 transition-all">
@@ -140,7 +156,7 @@
                                                 <div class="text-3xl" x-text="option.emoji"></div>
                                             </template>
                                             <div>
-                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition"
+                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 transition hover-text"
                                                     x-text="option.label"></h4>
                                                 <template x-if="option.description">
                                                     <p class="text-sm text-gray-500 dark:text-gray-400 transition" x-text="option.description"></p>
@@ -170,9 +186,10 @@
                                 x-text="currentPartnerQuestion.text"></h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <template x-for="(option, index) in currentPartnerQuestion.options">
-                                    <button @click="answerPartnerQuestion(option)"
-                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none transform hover:-translate-y-1">
+                                <template x-for="(option, index) in currentPartnerQuestion.options" :key="currentPartnerQuestion.id + '-' + index">
+                                    <button @click="answerPartnerQuestion(option); $el.blur()"
+                                        class="group relative overflow-hidden bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-2xl p-6 text-left transition-all duration-300 shadow-sm focus:outline-none transform active:scale-95 hover-trigger"
+                                        style="--tw-hover-border: #c084fc; --tw-hover-text: #9333ea;">
                                         <div class="flex items-start gap-4">
                                             <template x-if="option.image">
                                                 <img :src="option.image" alt="option image" class="w-16 h-16 rounded-xl object-cover shadow-sm border border-gray-200 dark:border-gray-600 transition-all">
@@ -181,7 +198,7 @@
                                                 <div class="text-3xl" x-text="option.emoji"></div>
                                             </template>
                                             <div>
-                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition"
+                                                <h4 class="font-bold text-gray-800 dark:text-gray-100 text-lg mb-1 transition hover-text"
                                                     x-text="option.label"></h4>
                                                 <template x-if="option.description">
                                                     <p class="text-sm text-gray-500 dark:text-gray-400 transition" x-text="option.description"></p>
@@ -616,6 +633,23 @@
                 },
 
                 renderChart() {
+                    const canvas = document.getElementById('spiderChart');
+                    if (!canvas) return;
+
+                    const ctx = canvas.getContext('2d');
+                    const labelMapping = {
+                        Spontaneous: "{{ __('Spontaneous') }}",
+                        Homebody: "{{ __('Homebody') }}",
+                        Adventurous: "{{ __('Adventurous') }}",
+                        Romantic: "{{ __('Romantic') }}",
+                        Logical: "{{ __('Logical') }}",
+                        Organized: "{{ __('Organized') }}",
+                        Social: "{{ __('Social') }}",
+                        Creative: "{{ __('Creative') }}"
+                    };
+                    const labels = Object.keys(this.traits).map(t => labelMapping[t] || t);
+                    const dataPoints = Object.values(this.traits);
+
                     if (this.chartInstance) {
                         this.chartInstance.destroy();
                     }

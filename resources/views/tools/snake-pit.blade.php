@@ -1,15 +1,8 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Snake Pit') }}
-        </h2>
-    </x-slot>
-
-    <div class="flex-grow flex flex-col w-full relative" x-data="snakePitGame()">
+    <div class="flex-grow flex flex-col w-full relative" x-data="snakePitGame()" x-cloak>
         <div class="flex-grow flex flex-col w-full h-full">
             <div class="flex-grow flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300 relative min-h-[600px] border border-gray-100 dark:border-gray-700">
 
-                
                 <x-game-header reset="resetGame()">
                     <h3 class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">{{ __('Snake Pit') }}</h3>
                     <p class="text-[8px] sm:text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] font-bold">{{ __('Avoid the hidden vipers') }}</p>
@@ -31,7 +24,7 @@
                     </template>
 
                     <!-- Grid and Turn Indicator -->
-                    <div x-show="players.length > 0" :class="gameState !== 'playing' ? 'invisible pointer-events-none' : ''" class="w-full flex flex-col items-center space-y-12 transition-opacity duration-300">
+                    <div x-show="players.length > 0" :class="gameState !== 'playing' ? 'opacity-0 pointer-events-none' : 'opacity-100'" class="w-full flex flex-col items-center space-y-12 transition-all duration-500">
                         <!-- Current Turn Indicator -->
                         <div class="text-center space-y-2">
                             <span class="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">{{ __('Active Turn:') }}</span>
@@ -78,47 +71,53 @@
                 </div>
 
                 <!-- Bitten State (End Screen) - Moved out to cover whole card -->
-                <div x-show="gameState === 'bitten' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-emerald-950 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
-                    <div class="relative mb-12">
+                <div x-show="gameState === 'bitten' || gameState === 'overall_winner'" 
+                    x-transition:enter="transition ease-out duration-300" 
+                    x-transition:enter-start="opacity-0 scale-95" 
+                    x-transition:enter-end="opacity-100 scale-100" 
+                    class="absolute inset-0 z-50 bg-emerald-950 overflow-y-auto p-4 sm:p-8 text-center shadow-2xl backdrop-blur-xl transition-colors duration-300">
+                    <div class="min-h-full flex flex-col items-center justify-center py-8">
+                    <div class="relative mb-8 sm:mb-12">
                         <template x-if="gameState === 'overall_winner'">
                             <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
                         </template>
                         <template x-if="gameState === 'bitten'">
                             <div class="absolute inset-0 bg-emerald-400 blur-3xl opacity-20 scale-150 rounded-full"></div>
                         </template>
-                        <div class="relative w-40 h-40 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center border-8 border-emerald-800 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-biohazard text-6xl text-rose-600 animate-spin-slow'"></i>
+                        <div class="relative w-28 h-28 sm:w-40 sm:h-40 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center border-4 sm:border-8 border-emerald-800 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-4xl sm:text-7xl' : 'fa-biohazard text-4xl sm:text-6xl text-rose-600 animate-spin-slow'"></i>
                         </div>
                     </div>
                     
-                    <div class="mb-12">
+                    <div class="mb-8 sm:mb-12">
                         <template x-if="gameState === 'overall_winner'">
                              <div>
-                                 <h2 class="text-xs font-black uppercase tracking-[1em] text-amber-500 mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
-                                 <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.8)]" x-text="winnerName"></div>
-                                 <h2 class="text-3xl font-black text-amber-600 italic tracking-widest mt-2 uppercase tracking-tighter">{{ __('Last Man Standing!') }}</h2>
+                                 <h2 class="text-[10px] sm:text-xs font-black uppercase tracking-[0.5em] sm:tracking-[1em] text-amber-500 mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
+                                 <div class="text-4xl sm:text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.8)]" x-text="winnerName"></div>
+                                 <h2 class="text-xl sm:text-3xl font-black text-amber-600 italic tracking-widest mt-2 uppercase tracking-tighter">{{ __('Last Man Standing!') }}</h2>
                              </div>
                         </template>
                         <template x-if="gameState === 'bitten'">
                             <div>
-                                <h2 class="text-xl font-bold text-emerald-500 uppercase tracking-[0.5em] mb-4" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('You\'ve been bitten!') }}'"></h2>
-                                <div class="text-7xl font-black text-rose-600 italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="players[currentPlayerIndex]"></div>
-                                <p class="text-emerald-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Prepare your wallet!') }}</p>
+                                <h2 class="text-lg sm:text-xl font-bold text-emerald-500 uppercase tracking-[0.2em] sm:tracking-[0.5em] mb-4" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('You\'ve been bitten!') }}'"></h2>
+                                <div class="text-4xl sm:text-7xl font-black text-rose-600 italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="players[currentPlayerIndex]"></div>
+                                <p class="text-emerald-400 text-base sm:text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Prepare your wallet!') }}</p>
                             </div>
                         </template>
                     </div>
 
                     <template x-if="gameState === 'overall_winner'">
-                         <button @click="resetRound()" class="group relative w-full max-w-sm py-6 bg-amber-600 hover:bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(251,191,36,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
+                         <button @click="resetRound()" class="group relative w-full max-w-sm py-4 sm:py-6 bg-amber-600 hover:bg-amber-500 text-white font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(251,191,36,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
                              <span class="relative z-10 uppercase tracking-tighter text-white">{{ __('NEW ROUND') }}</span>
                          </button>
                      </template>
                      <template x-if="gameState === 'bitten'">
-                         <button @click="resetGame()" class="group relative w-full max-w-sm py-6 bg-rose-600 hover:bg-rose-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(225,29,72,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
+                         <button @click="resetGame()" class="group relative w-full max-w-sm py-4 sm:py-6 bg-rose-600 hover:bg-rose-500 text-white font-black text-xl sm:text-2xl rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(225,29,72,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
                              <span class="relative z-10 uppercase tracking-tighter" x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('RESET PIT') }}'"></span>
                          </button>
                      </template>
                 </div>
+            </div>
 
 
 
