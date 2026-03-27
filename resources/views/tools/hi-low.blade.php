@@ -33,101 +33,98 @@
                         </div>
                     </template>
 
-                    <template x-if="players.length > 0 && gameState === 'playing'">
-                        <div class="w-full max-w-md space-y-12 text-center">
-                            <!-- Current Player -->
-                            <div class="space-y-2">
-                                <span class="text-xs font-bold uppercase tracking-widest text-indigo-500">{{ __('Current Turn') }}</span>
-                                <div class="text-4xl font-extrabold dark:text-white" x-text="players[currentPlayerIndex]"></div>
-                            </div>
+                    <!-- Game Content Wrapper -->
+                    <div x-show="players.length > 0" :class="gameState !== 'playing' ? 'invisible pointer-events-none' : ''" class="w-full max-w-md space-y-12 text-center transition-opacity duration-300">
+                        <!-- Current Player -->
+                        <div class="space-y-2">
+                            <span class="text-xs font-bold uppercase tracking-widest text-indigo-500">{{ __('Current Turn') }}</span>
+                            <div class="text-4xl font-extrabold dark:text-white" x-text="players[currentPlayerIndex]"></div>
+                        </div>
 
-                            <!-- Big Number -->
-                            <div class="relative">
-                                <div class="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 rounded-full"></div>
-                                <div class="relative bg-white dark:bg-gray-700 w-48 h-48 rounded-3xl shadow-inner border border-gray-100 dark:border-gray-600 flex items-center justify-center mx-auto">
-                                    <span class="text-8xl font-black text-gray-800 dark:text-white" x-text="currentNumber"></span>
-                                </div>
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <button 
-                                    @click="guess('high')"
-                                    class="group relative overflow-hidden px-8 py-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:translate-y-0"
-                                >
-                                    <div class="relative z-10 flex flex-col items-center">
-                                         <i class="fas fa-chevron-up text-2xl mb-1 group-hover:bounce"></i>
-                                         <span class="font-bold text-lg uppercase">{{ __('Higher') }}</span>
-                                     </div>
-                                    <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                                </button>
-
-                                <button 
-                                    @click="guess('low')"
-                                    class="group relative overflow-hidden px-8 py-6 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:translate-y-0"
-                                >
-                                    <div class="relative z-10 flex flex-col items-center">
-                                         <i class="fas fa-chevron-down text-2xl mb-1 group-hover:bounce"></i>
-                                         <span class="font-bold text-lg uppercase">{{ __('Lower') }}</span>
-                                     </div>
-                                    <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                                </button>
+                        <!-- Big Number -->
+                        <div class="relative">
+                            <div class="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 rounded-full"></div>
+                            <div class="relative bg-white dark:bg-gray-700 w-48 h-48 rounded-3xl shadow-inner border border-gray-100 dark:border-gray-600 flex items-center justify-center mx-auto">
+                                <span class="text-8xl font-black text-gray-800 dark:text-white" x-text="currentNumber"></span>
                             </div>
                         </div>
-                    </template>
+
+                        <!-- Buttons -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <button 
+                                @click="guess('high')"
+                                class="group relative overflow-hidden px-8 py-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:translate-y-0"
+                            >
+                                <div class="relative z-10 flex flex-col items-center">
+                                     <i class="fas fa-chevron-up text-2xl mb-1 group-hover:bounce"></i>
+                                     <span class="font-bold text-lg uppercase">{{ __('Higher') }}</span>
+                                 </div>
+                                <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                            </button>
+
+                            <button 
+                                @click="guess('low')"
+                                class="group relative overflow-hidden px-8 py-6 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:translate-y-0"
+                            >
+                                <div class="relative z-10 flex flex-col items-center">
+                                     <i class="fas fa-chevron-down text-2xl mb-1 group-hover:bounce"></i>
+                                     <span class="font-bold text-lg uppercase">{{ __('Lower') }}</span>
+                                 </div>
+                                <div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Picked State (End Screen Redesign) - Standard and LMS -->
-                <template x-if="gameState === 'picked' || gameState === 'overall_winner'">
-                    <div class="absolute inset-0 z-50 bg-white/95 dark:bg-gray-800/95 flex flex-col items-center justify-center p-8 text-center animate-bounce-in shadow-2xl backdrop-blur-md sm:rounded-3xl">
-                        <div class="relative mb-8">
-                            <template x-if="gameState === 'overall_winner'">
-                                <div class="absolute inset-0 bg-amber-400 blur-2xl opacity-20 rounded-full animate-pulse scale-150"></div>
-                            </template>
-                            <template x-if="gameState === 'picked'">
-                                <div class="absolute inset-0 bg-rose-500 blur-2xl opacity-20 rounded-full animate-pulse scale-150"></div>
-                            </template>
-                            <div class="relative w-40 h-40 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center border-8 border-rose-500 shadow-[0_30px_60px_rgba(225,29,72,0.3)]">
-                                <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-times text-7xl text-rose-500'"></i>
-                            </div>
-                        </div>
-
-                        <div class="mb-12">
-                            <template x-if="gameState === 'overall_winner'">
-                                <div>
-                                    <h2 class="text-xs font-black uppercase tracking-[1em] text-amber-500 mb-4 px-2">{{ __('ULTIMATE CHAMPION') }}</h2>
-                                    <div class="text-7xl font-black text-amber-600 italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.3)]" x-text="winnerName"></div>
-                                    <p class="text-gray-500 dark:text-gray-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Last Man Standing!') }}</p>
-                                </div>
-                            </template>
-                            <template x-if="gameState === 'picked'">
-                                <div>
-                                    <h2 class="text-xs font-black uppercase tracking-[1em] text-rose-500 mb-4 px-2">{{ __('Wrong Guess') }}</h2>
-                                    <div class="text-7xl font-black text-rose-500 italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(225,29,72,0.3)]" x-text="lastPickedPlayer"></div>
-                                    <p class="text-gray-500 dark:text-gray-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('Prepare your wallet!') }}'"></p>
-                                </div>
-                            </template>
-                        </div>
-
-                        <div class="w-full max-w-sm space-y-4">
-                            <template x-if="gameState === 'overall_winner'">
-                                <button @click="resetRound()" class="w-full py-6 bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
-                                    {{ __('NEW ROUND') }}
-                                </button>
-                            </template>
-                            <template x-if="gameState === 'picked'">
-                                <div>
-                                    <div class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">
-                                        {{ __('The number was') }} <span class="text-gray-800 dark:text-white" x-text="nextNumber"></span>
-                                    </div>
-                                    <button @click="resetGame()" class="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
-                                        <span x-text="lmsActive ? 'NEXT ROUND' : '{{ __('NEXT SACRIFICE') }}'"></span>
-                                    </button>
-                                </div>
-                            </template>
+                <div x-show="gameState === 'picked' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-white/95 dark:bg-gray-800/95 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-md sm:rounded-3xl">
+                    <div class="relative mb-8">
+                        <template x-if="gameState === 'overall_winner'">
+                            <div class="absolute inset-0 bg-amber-400 blur-2xl opacity-20 rounded-full animate-pulse scale-150"></div>
+                        </template>
+                        <template x-if="gameState === 'picked'">
+                            <div class="absolute inset-0 bg-rose-500 blur-2xl opacity-20 rounded-full animate-pulse scale-150"></div>
+                        </template>
+                        <div class="relative w-40 h-40 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center border-8 border-rose-500 shadow-[0_30px_60px_rgba(225,29,72,0.3)]">
+                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-times text-7xl text-rose-500'"></i>
                         </div>
                     </div>
-                </template>
+
+                    <div class="mb-12">
+                        <template x-if="gameState === 'overall_winner'">
+                            <div>
+                                <h2 class="text-xs font-black uppercase tracking-[1em] text-amber-500 mb-4 px-2">{{ __('ULTIMATE CHAMPION') }}</h2>
+                                <div class="text-7xl font-black text-amber-600 italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.3)]" x-text="winnerName"></div>
+                                <p class="text-gray-500 dark:text-gray-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Last Man Standing!') }}</p>
+                            </div>
+                        </template>
+                        <template x-if="gameState === 'picked'">
+                            <div>
+                                <h2 class="text-xs font-black uppercase tracking-[1em] text-rose-500 mb-4 px-2">{{ __('Wrong Guess') }}</h2>
+                                <div class="text-7xl font-black text-rose-500 italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(225,29,72,0.3)]" x-text="lastPickedPlayer"></div>
+                                <p class="text-gray-500 dark:text-gray-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('Prepare your wallet!') }}'"></p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="w-full max-w-sm space-y-4">
+                        <template x-if="gameState === 'overall_winner'">
+                            <button @click="resetRound()" class="w-full py-6 bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                                {{ __('NEW ROUND') }}
+                            </button>
+                        </template>
+                        <template x-if="gameState === 'picked'">
+                            <div>
+                                <div class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">
+                                    {{ __('The number was') }} <span class="text-gray-800 dark:text-white" x-text="nextNumber"></span>
+                                </div>
+                                <button @click="resetGame()" class="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(79,70,229,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                                    <span x-text="lmsActive ? 'NEXT ROUND' : '{{ __('NEXT SACRIFICE') }}'"></span>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
 
 
                 <!-- History / Footer -->

@@ -30,98 +30,95 @@
                          </div>
                     </template>
 
-                    <template x-if="players.length > 0 && gameState === 'playing'">
-                        <div class="w-full flex flex-col items-center space-y-12">
-                            <!-- Current Turn Indicator -->
-                            <div class="text-center space-y-2">
-                                <span class="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">{{ __('Active Turn:') }}</span>
-                                <div class="text-4xl font-black dark:text-white uppercase italic tracking-tighter" x-text="players[currentPlayerIndex]"></div>
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ __('Pick a tile carefully') }}</p>
-                            </div>
-
-                            <!-- The Grid -->
-                            <div class="grid grid-cols-4 gap-3 lg:gap-4 p-4 bg-emerald-950/50 rounded-3xl border-2 border-emerald-800 shadow-2xl shadow-black/50 overflow-hidden relative">
-                                <template x-for="(cell, index) in grid" :key="index">
-                                    <div 
-                                        @click="reveal(index)"
-                                        :class="{
-                                            'bg-emerald-700 border-2 border-emerald-600 shadow-[inset_0_2px_10px_rgba(255,255,255,0.1)]': !cell.revealed,
-                                            'bg-emerald-950 cursor-default scale-95 opacity-50': cell.revealed && !cell.isSnake,
-                                            'bg-rose-600 animate-wiggle-fast shadow-[0_0_50px_rgba(225,29,72,0.8)] border-4 border-white': cell.revealed && cell.isSnake
-                                        }"
-                                        class="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 group overflow-hidden"
-                                    >
-                                        <template x-if="!cell.revealed">
-                                            <div class="w-2 h-2 bg-emerald-900/50 rounded-full group-hover:scale-150 transition-transform"></div>
-                                        </template>
-                                        <template x-if="cell.revealed">
-                                            <span>
-                                                <template x-if="cell.isSnake">
-                                                    <i class="fas fa-skull-crossbones text-3xl text-white"></i>
-                                                </template>
-                                                <template x-if="!cell.isSnake">
-                                                    <i class="fas fa-times text-emerald-800 text-2xl"></i>
-                                                </template>
-                                            </span>
-                                        </template>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <!-- Footer Instruction -->
-                            <div class="flex items-center gap-3 text-emerald-700 font-bold uppercase tracking-widest text-[8px] italic animate-pulse">
-                                <i class="fas fa-chevron-left animate-bounce-horizontal"></i>
-                                Pick a tile carefully
-                                <i class="fas fa-chevron-right animate-bounce-horizontal-rev"></i>
-                            </div>
+                    <!-- Grid and Turn Indicator -->
+                    <div x-show="players.length > 0" :class="gameState !== 'playing' ? 'invisible pointer-events-none' : ''" class="w-full flex flex-col items-center space-y-12 transition-opacity duration-300">
+                        <!-- Current Turn Indicator -->
+                        <div class="text-center space-y-2">
+                            <span class="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">{{ __('Active Turn:') }}</span>
+                            <div class="text-4xl font-black dark:text-white uppercase italic tracking-tighter" x-text="players[currentPlayerIndex]"></div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ __('Pick a tile carefully') }}</p>
                         </div>
-                    </template>
-                </div>
 
-                <!-- Bitten State (End Screen) - Moved out to cover whole card -->
-                <template x-if="gameState === 'bitten' || gameState === 'overall_winner'">
-                    <div class="absolute inset-0 z-50 bg-emerald-950 flex flex-col items-center justify-center p-8 text-center animate-fade-in shadow-2xl backdrop-blur-xl">
-                        <div class="relative mb-12">
-                            <template x-if="gameState === 'overall_winner'">
-                                <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
-                            </template>
-                            <template x-if="gameState === 'bitten'">
-                                <div class="absolute inset-0 bg-emerald-400 blur-3xl opacity-20 scale-150 rounded-full"></div>
-                            </template>
-                            <div class="relative w-40 h-40 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center border-8 border-emerald-800 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                                <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-biohazard text-6xl text-rose-600 animate-spin-slow'"></i>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-12">
-                            <template x-if="gameState === 'overall_winner'">
-                                 <div>
-                                     <h2 class="text-xs font-black uppercase tracking-[1em] text-amber-500 mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
-                                     <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.8)]" x-text="winnerName"></div>
-                                     <h2 class="text-3xl font-black text-amber-600 italic tracking-widest mt-2 uppercase tracking-tighter">{{ __('Last Man Standing!') }}</h2>
-                                 </div>
-                            </template>
-                            <template x-if="gameState === 'bitten'">
-                                <div>
-                                    <h2 class="text-xl font-bold text-emerald-500 uppercase tracking-[0.5em] mb-4" x-text="lmsActive ? 'You are Eliminated!' : 'You\'ve been bitten!'"></h2>
-                                    <div class="text-7xl font-black text-rose-600 italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="players[currentPlayerIndex]"></div>
-                                    <p class="text-emerald-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">Prepare your wallet!</p>
+                        <!-- The Grid -->
+                        <div class="grid grid-cols-4 gap-3 lg:gap-4 p-4 bg-emerald-950/50 rounded-3xl border-2 border-emerald-800 shadow-2xl shadow-black/50 overflow-hidden relative">
+                            <template x-for="(cell, index) in grid" :key="index">
+                                <div 
+                                    @click="reveal(index)"
+                                    :class="{
+                                        'bg-emerald-700 border-2 border-emerald-600 shadow-[inset_0_2px_10px_rgba(255,255,255,0.1)]': !cell.revealed,
+                                        'bg-emerald-950 cursor-default scale-95 opacity-50': cell.revealed && !cell.isSnake,
+                                        'bg-rose-600 animate-wiggle-fast shadow-[0_0_50px_rgba(225,29,72,0.8)] border-4 border-white': cell.revealed && cell.isSnake
+                                    }"
+                                    class="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 group overflow-hidden"
+                                >
+                                    <template x-if="!cell.revealed">
+                                        <div class="w-2 h-2 bg-emerald-900/50 rounded-full group-hover:scale-150 transition-transform"></div>
+                                    </template>
+                                    <template x-if="cell.revealed">
+                                        <span>
+                                            <template x-if="cell.isSnake">
+                                                <i class="fas fa-skull-crossbones text-3xl text-white"></i>
+                                            </template>
+                                            <template x-if="!cell.isSnake">
+                                                <i class="fas fa-times text-emerald-800 text-2xl"></i>
+                                            </template>
+                                        </span>
+                                    </template>
                                 </div>
                             </template>
                         </div>
 
-                        <template x-if="gameState === 'overall_winner'">
-                             <button @click="resetRound()" class="group relative w-full max-w-sm py-6 bg-amber-600 hover:bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(251,191,36,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
-                                 <span class="relative z-10 uppercase tracking-tighter text-white">{{ __('NEW ROUND') }}</span>
-                             </button>
-                         </template>
-                         <template x-if="gameState === 'bitten'">
-                             <button @click="resetGame()" class="group relative w-full max-w-sm py-6 bg-rose-600 hover:bg-rose-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(225,29,72,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
-                                 <span class="relative z-10 uppercase tracking-tighter" x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('RESET PIT') }}'"></span>
-                             </button>
-                         </template>
+                        <!-- Footer Instruction -->
+                        <div class="flex items-center gap-3 text-emerald-700 font-bold uppercase tracking-widest text-[8px] italic animate-pulse">
+                            <i class="fas fa-chevron-left animate-bounce-horizontal"></i>
+                            {{ __('Pick a tile carefully') }}
+                            <i class="fas fa-chevron-right animate-bounce-horizontal-rev"></i>
+                        </div>
                     </div>
-                </template>
+                </div>
+
+                <!-- Bitten State (End Screen) - Moved out to cover whole card -->
+                <div x-show="gameState === 'bitten' || gameState === 'overall_winner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" class="absolute inset-0 z-50 bg-emerald-950 flex flex-col items-center justify-center p-8 text-center shadow-2xl backdrop-blur-xl sm:rounded-[2.5rem]">
+                    <div class="relative mb-12">
+                        <template x-if="gameState === 'overall_winner'">
+                            <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
+                        </template>
+                        <template x-if="gameState === 'bitten'">
+                            <div class="absolute inset-0 bg-emerald-400 blur-3xl opacity-20 scale-150 rounded-full"></div>
+                        </template>
+                        <div class="relative w-40 h-40 bg-white dark:bg-emerald-900 rounded-full flex items-center justify-center border-8 border-emerald-800 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+                            <i class="fas" :class="gameState === 'overall_winner' ? 'fa-crown text-amber-500 text-7xl' : 'fa-biohazard text-6xl text-rose-600 animate-spin-slow'"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-12">
+                        <template x-if="gameState === 'overall_winner'">
+                             <div>
+                                 <h2 class="text-xs font-black uppercase tracking-[1em] text-amber-500 mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
+                                 <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_5px_15px_rgba(251,191,36,0.8)]" x-text="winnerName"></div>
+                                 <h2 class="text-3xl font-black text-amber-600 italic tracking-widest mt-2 uppercase tracking-tighter">{{ __('Last Man Standing!') }}</h2>
+                             </div>
+                        </template>
+                        <template x-if="gameState === 'bitten'">
+                            <div>
+                                <h2 class="text-xl font-bold text-emerald-500 uppercase tracking-[0.5em] mb-4" x-text="lmsActive ? '{{ __('You are Eliminated!') }}' : '{{ __('You\'ve been bitten!') }}'"></h2>
+                                <div class="text-7xl font-black text-rose-600 italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="players[currentPlayerIndex]"></div>
+                                <p class="text-emerald-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Prepare your wallet!') }}</p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <template x-if="gameState === 'overall_winner'">
+                         <button @click="resetRound()" class="group relative w-full max-w-sm py-6 bg-amber-600 hover:bg-amber-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(251,191,36,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
+                             <span class="relative z-10 uppercase tracking-tighter text-white">{{ __('NEW ROUND') }}</span>
+                         </button>
+                     </template>
+                     <template x-if="gameState === 'bitten'">
+                         <button @click="resetGame()" class="group relative w-full max-w-sm py-6 bg-rose-600 hover:bg-rose-500 text-white font-black text-2xl rounded-3xl shadow-[0_20px_60px_rgba(225,29,72,0.4)] transition-all hover:scale-105 active:scale-95 overflow-hidden flex items-center justify-center">
+                             <span class="relative z-10 uppercase tracking-tighter" x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('RESET PIT') }}'"></span>
+                         </button>
+                     </template>
+                </div>
 
 
 
@@ -186,7 +183,7 @@
                     this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
                 },
 
-                reset() {
+                resetGame() {
                     if (this.lmsActive) {
                        window.location.reload();
                        return;

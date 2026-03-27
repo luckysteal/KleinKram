@@ -33,7 +33,7 @@ Route::get('/mexi-calculator', [MexiCalculatorController::class, 'index'])->name
 Route::post('/mexi-calculator/calculate', [MexiCalculatorController::class, 'calculate'])->name('mexi-calculator.calculate');
 Route::get('/mexi-calculator/results', [MexiCalculatorController::class, 'showResults'])->name('mexi-calculator.show-results');
 
-Route::get('/info', [PageController::class, 'info'])->name('info');
+Route::get('/info', [PageController::class, 'info']);
 Route::get('/games', [GameController::class, 'index'])->name('games.index');
 
 Route::get('/tools/word-count', [ToolController::class, 'wordCount'])->name('tools.word-count');

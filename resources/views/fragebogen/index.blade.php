@@ -51,7 +51,7 @@
                                                 <button @click="personalInfo.gender = gender"
                                                     :class="personalInfo.gender === gender ? 'bg-pink-100 border-pink-500 text-pink-700 font-semibold' : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300'"
                                                     class="py-2 border rounded-xl transition text-xs focus:outline-none">
-                                                    <span x-text="{!! json_encode(['Male' => __('Male'), 'Female' => __('Female'), 'Other' => __('Other')]) !!}[gender]"></span>
+                                                    <span x-text="@js(['Male' => __('Male'), 'Female' => __('Female'), 'Other' => __('Other')])[gender]"></span>
                                                 </button>
                                             </template>
                                         </div>
@@ -64,7 +64,7 @@
                                                 <button @click="personalInfo.seeking = seeking"
                                                     :class="personalInfo.seeking === seeking ? 'bg-purple-100 border-purple-500 text-purple-700 font-semibold' : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300'"
                                                      class="flex-1 py-2 border rounded-xl transition text-xs focus:outline-none">
-                                                    <span x-text="{!! json_encode(['Men' => __('Men'), 'Women' => __('Women'), 'Everyone' => __('Everyone')]) !!}[seeking]"></span>
+                                                    <span x-text="@js(['Men' => __('Men'), 'Women' => __('Women'), 'Everyone' => __('Everyone')])[seeking]"></span>
                                                 </button>
                                             </template>
                                         </div>
