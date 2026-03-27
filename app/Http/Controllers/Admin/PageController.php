@@ -17,7 +17,12 @@ class PageController extends Controller
     public function update(Request $request)
     {
         $page = Page::first();
-        $page->update($request->only('title', 'content', 'global_tax_enabled', 'german_tax_enabled', 'church_tax_enabled', 'badges'));
+        $page->update(array_merge($request->only('title', 'content', 'badges'), [
+            'global_tax_enabled' => $request->has('global_tax_enabled'),
+            'german_tax_enabled' => $request->has('german_tax_enabled'),
+            'church_tax_enabled' => $request->has('church_tax_enabled'),
+            'show_dating_universe' => $request->has('show_dating_universe'),
+        ]));
 
         return redirect()->route('admin.page.edit');
     }

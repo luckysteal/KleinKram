@@ -1,281 +1,745 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
             {{ __('Spinning Crown') }}
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <livewire:player-manager :initial-players="json_encode($names)" />
+    <div class="py-12" x-data="crownGame()">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
 
-                    <div x-data="spinningCrownGame($wire.entangle('players'))" x-init="init()" class="mt-8 text-center">
-                        <h3 class="text-lg font-semibold mb-4">Spin the Crown!</h3>
-                        <div id="three-js-container" class="relative w-full h-96 mx-auto" style="min-height: 400px;"></div>
-                        <button @click="spin()" :disabled="spinning" class="px-6 py-3 bg-purple-600 text-white rounded-md mt-4 text-xl">
-                            <span x-show="!spinning">Spin!</span>
-                            <span x-show="spinning">Spinning...</span>
-                        </button>
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <style>
+                    #game-container {
+                        position: relative;
+                        width: 100%;
+                        height: 600px;
+                        background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d1a 100%);
+                        font-family: 'Montserrat', sans-serif;
+                        color: #fff;
+                        overflow: hidden;
+                    }
 
-                        <div x-show="winner" class="mt-4 text-2xl font-bold text-green-700">
-                            Winner: <span x-text="winner"></span> has to pay!
+                    #canvas-container {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                    }
+
+                    .hud {
+                        position: absolute;
+                        bottom: 40px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        z-index: 10;
+                    }
+
+                    #spin-button {
+                        padding: 15px 40px;
+                        font-size: 24px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                        border: none;
+                        border-radius: 50px;
+                        color: white;
+                        cursor: pointer;
+                        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        outline: none;
+                    }
+
+                    #spin-button:hover {
+                        transform: translateY(-5px) scale(1.05);
+                        box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6);
+                    }
+
+                    #spin-button:active {
+                        transform: translateY(-2px) scale(0.98);
+                    }
+
+                    #spin-button:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                        transform: none;
+                    }
+
+                    #winner-display {
+                        margin-top: 20px;
+                        font-size: 32px;
+                        font-weight: 700;
+                        text-align: center;
+                        min-height: 48px;
+                        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+                        opacity: 0;
+                        transform: translateY(10px);
+                        transition: all 0.5s ease;
+                    }
+
+                    #winner-display.show {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+
+                    .label {
+                        color: #fff;
+                        padding: 4px 12px;
+                        background: rgba(0, 0, 0, 0.6);
+                        backdrop-filter: blur(4px);
+                        border-radius: 20px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        pointer-events: none;
+                        white-space: nowrap;
+                        position: relative;
+                        z-index: 1;
+                    }
+
+                    .crown-pointer {
+                        width: 0;
+                        height: 0;
+                        border-left: 10px solid transparent;
+                        border-right: 10px solid transparent;
+                        border-top: 28px solid #ff0000;
+                        filter: drop-shadow(0 0 12px rgba(255, 0, 0, 0.75));
+                        transform: translateY(2px);
+                        pointer-events: none;
+                        position: relative;
+                        z-index: 2;
+                    }
+
+                    .winner-crown {
+                        position: absolute;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        text-align: center;
+                    }
+
+                    .winner-crown h1 {
+                        font-size: 18px;
+                        letter-spacing: 4px;
+                        color: rgba(255, 255, 255, 0.3);
+                        text-transform: uppercase;
+                        margin: 0;
+                    }
+                </style>
+
+                <x-game-header reset="resetGame()">
+                    <h3 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-[0.3em] italic">{{ __('Spinning Crown') }}</h3>
+                </x-game-header>
+
+                <div id="game-container" 
+                    @winner-calculated.window="showWinner($event.detail)"
+                    x-init="initGame()"
+                >
+                    <div id="canvas-container"></div>
+                    
+                    @if(empty($names))
+                    <div id="no-players-overlay" class="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center sm:rounded-3xl">
+                        <div class="bg-indigo-600/20 border border-indigo-500/50 p-8 rounded-2xl max-w-md">
+                            <svg class="w-16 h-16 text-indigo-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                            <div>
+                                <h3 class="text-xl font-bold dark:text-white">{{ __('No Players Found') }}</h3>
+                                <p class="text-gray-500 dark:text-gray-400">{{ __('You need at least one player to spin the crown!') }}</p>
+                            </div>
+                            <a href="{{ route('tools.player-selection') }}" class="inline-block px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-transform hover:scale-105">
+                                {{ __('Add Players Now') }}
+                            </a>
                         </div>
+                    </div>
+                    @endif
+
+                    <!-- Winner Overlay (Standard and LMS) -->
+                    <template x-if="gameState === 'winner' || gameState === 'overall_winner' || gameState === 'eliminated' || gameState === 'picked'">
+                        <div class="absolute inset-0 z-50 bg-indigo-950/95 flex flex-col items-center justify-center p-8 text-center animate-fade-in shadow-2xl backdrop-blur-xl sm:rounded-3xl">
+                            <div class="relative mb-8">
+                                <template x-if="gameState === 'overall_winner'">
+                                    <div class="absolute inset-0 bg-amber-400 blur-3xl opacity-30 scale-150 rounded-full animate-pulse"></div>
+                                </template>
+                                <template x-if="gameState === 'winner' || gameState === 'picked'">
+                                    <div class="absolute inset-0 bg-indigo-400 blur-3xl opacity-20 scale-150 rounded-full animate-pulse"></div>
+                                </template>
+                                <template x-if="gameState === 'eliminated'">
+                                    <div class="absolute inset-0 bg-rose-600 blur-3xl opacity-20 scale-150 rounded-full animate-pulse"></div>
+                                </template>
+                                <div class="relative w-40 h-40 bg-white dark:bg-indigo-900 rounded-full flex items-center justify-center border-8 border-indigo-700 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+                                    <i class="fas fa-crown text-7xl text-amber-400 animate-bounce"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-12">
+                                <template x-if="gameState === 'overall_winner'">
+                                    <div>
+                                        <h2 class="text-xl font-bold text-amber-500 uppercase tracking-[0.5em] mb-4">{{ __('ULTIMATE CHAMPION') }}</h2>
+                                        <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="winnerName"></div>
+                                        <p class="text-amber-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('Last Man Standing!') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="gameState === 'eliminated'">
+                                    <div>
+                                        <h2 class="text-xl font-bold text-rose-500 uppercase tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
+                                        <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(225,29,72,0.4)]" x-text="eliminatedPlayer"></div>
+                                        <p class="text-rose-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('You are Eliminated!') }}</p>
+                                    </div>
+                                </template>
+                                <template x-if="(gameState === 'picked' || gameState === 'winner') && !lmsActive">
+                                    <div>
+                                        <h2 class="text-xl font-bold text-amber-500 uppercase tracking-[0.5em] mb-4">{{ __('CHRONICLE OF FATE') }}</h2>
+                                        <div class="text-7xl font-black text-white italic tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" x-text="lastPickedPlayer"></div>
+                                        <p class="text-amber-400 text-lg mt-4 font-bold opacity-80 uppercase tracking-widest italic">{{ __('The Chosen One!') }}</p>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <template x-if="gameState === 'overall_winner'">
+                                <button @click="resetRound()" class="w-full max-w-sm py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                                    {{ __('NEW ROUND') }}
+                                </button>
+                            </template>
+                            <template x-if="gameState === 'eliminated' || (gameState === 'picked' || gameState === 'winner')">
+                                <button @click="resetGame()" class="w-full max-w-sm py-6 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-2xl rounded-3xl shadow-[0_20px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 uppercase tracking-tighter">
+                                    <span x-text="lmsActive ? '{{ __('NEXT ROUND') }}' : '{{ __('NEXT SPIN') }}'"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+
+                    <div class="hud" x-show="gameState === 'playing'" x-transition>
+                        <button id="spin-button" {{ empty($names) ? 'disabled' : '' }}>{{ __('Spin') }}</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    @push('scripts')
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-            "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js",
-            "three/examples/jsm/renderers/CSS2DRenderer.js": "https://unpkg.com/three@0.128.0/examples/jsm/renderers/CSS2DRenderer.js"
-        }
-    }
-    </script>
-    <script src="https://unpkg.com/@tweenjs/tween.js@latest/dist/tween.umd.js"></script>
+    <!-- Simplified module imports for better mobile compatibility using esm.sh which handles resolution -->
     <script type="module">
-        import * as THREE from 'three';
-        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-        import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+        import * as THREE from 'https://esm.sh/three@0.128.0';
+        import { GLTFLoader } from 'https://esm.sh/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+        import { CSS2DRenderer, CSS2DObject } from 'https://esm.sh/three@0.128.0/examples/jsm/renderers/CSS2DRenderer.js';
+        import * as TWEEN from 'https://esm.sh/@tweenjs/tween.js@18.6.4'; 
 
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('spinningCrownGame', (initialNames) => ({
-                players: initialNames || [],
-                spinning: false,
-                winner: null,
-                spinDuration: 5, // seconds
-                scene: null,
-                camera: null,
-                renderer: null,
-                labelRenderer: null,
-                crown: null,
-                pivot: null, // Add pivot to Alpine data
-                directionalLight: null, // Add directionalLight to Alpine data
-                stickFigures: [],
-                pointer: null,
+        // Interface for Alpine to talk to Three.js
+        window.crownScene = {
+            spin: null,
+            reset: null,
+            init: null
+        };
 
-                // Fixed crown and stick figure settings
-                TOTAL_CROWN_TIPS: 9,
-                crownOffsetX: -0.4,
-                lightIntensity: 4.0,
-                lightX: 0,
-                lightY: 5,
-                lightZ: 10,
-                stickFigureRadius: 2.48,
-                stickFigureHeight: 1.3,
-                stickFigureStartAngleOffset: 3.14,
+        let scene, camera, renderer, labelRenderer, crown, pivot, stickFigures = [];
+        let pointer;
+        let players = @json($names);
+        let spinning = false;
+        let isReadyState = false;
+        const TOTAL_CROWN_TIPS = 9;
+        const crownOffsetX = -0.4;
+        const stickFigureRadius = 2.48;
+        const stickFigureHeight = 1.3;
+        const stickFigureStartAngleOffset = 3.14;
 
-                async init() {
-                    this.setupThreeJs();
-                    await this.loadCrownModel(); // Ensure model is loaded before creating stick figures
-                    this.updatePlayers(this.players);
+        function init() {
+            const container = document.getElementById('canvas-container');
+            const gameContainer = document.getElementById('game-container');
 
-                    // Watch for changes in the players array from Livewire
-                    this.$watch('players', (newPlayers) => this.updatePlayers(newPlayers));
+            // Scene
+            scene = new THREE.Scene();
 
-                    this.animate();
-                },
+            // Camera - with robust sizing
+            const width = gameContainer.clientWidth || window.innerWidth;
+            const height = gameContainer.clientHeight || 600;
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(0, 5, 12);
+            camera.lookAt(0, 0, 0);
 
-                setupThreeJs() {
-                    const container = document.getElementById('three-js-container');
-                    const width = container.clientWidth;
-                    const height = container.clientHeight;
+            const ambientLight = new THREE.AmbientLight(0xffffff, 10.0);
+            scene.add(ambientLight);
 
-                    this.scene = new THREE.Scene();
+            // "The Sun" - powerful directional light angled upwards from the bottom front
+            const sunLight = new THREE.DirectionalLight(0xffffff, 20.0);
+            sunLight.position.set(0, -5, 15);
+            scene.add(sunLight);
 
-                    this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-                    this.camera.position.set(0, 2, 10);
-                    this.camera.lookAt(0, 0, 0);
+            // Point lights encircling the crown for multi-angle flooding from below
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const pl = new THREE.PointLight(0xffffff, 30.0, 100);
+                pl.position.set(Math.cos(angle) * 15, -5, Math.sin(angle) * 15);
+                scene.add(pl);
+            }
 
-                    // Lighting
-                    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-                    this.scene.add(ambientLight);
+            // Camera-positioned light for front-facing brightness (Flash)
+            const camLight = new THREE.PointLight(0xffffff, 40.0, 100);
+            camLight.position.set(0, -5, 12);
+            scene.add(camLight);
 
-                    this.directionalLight = new THREE.DirectionalLight(0xffffff, this.lightIntensity);
-                    this.directionalLight.position.set(this.lightX, this.lightY, this.lightZ);
-                    this.scene.add(this.directionalLight);
+            // Renderer with mobile fail-safes
+            try {
+                renderer = new THREE.WebGLRenderer({ 
+                    antialias: window.devicePixelRatio < 2, // Disable antialias on high-DPI (retina) for performance
+                    alpha: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for mobile performance
+                
+                const width = gameContainer.clientWidth || window.innerWidth;
+                const height = gameContainer.clientHeight || 600;
+                renderer.setSize(width, height);
+                
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.0;
+                renderer.shadowMap.enabled = false;
+                renderer.domElement.style.zIndex = '1';
+                container.appendChild(renderer.domElement);
+            } catch (e) {
+                console.error("WebGL failed", e);
+                gameContainer.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-white p-8 text-center bg-black/50">Your device does not support WebGL or it is disabled.</div>';
+                return;
+            }
 
-                    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                    this.renderer.setPixelRatio(window.devicePixelRatio);
-                    this.renderer.setSize(width, height);
-                    container.appendChild(this.renderer.domElement);
+            // Label Renderer
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none';
+            labelRenderer.domElement.style.zIndex = '0';
+            container.appendChild(labelRenderer.domElement);
 
-                    this.labelRenderer = new CSS2DRenderer();
-                    this.labelRenderer.setSize(width, height);
-                    this.labelRenderer.domElement.style.position = 'absolute';
-                    this.labelRenderer.domElement.style.top = '0px';
-                    this.labelRenderer.domElement.style.pointerEvents = 'none';
-                    container.appendChild(this.labelRenderer.domElement);
+            // Pivot Point
+            pivot = new THREE.Group();
+            scene.add(pivot);
 
-                    // Create a pivot point
-                    this.pivot = new THREE.Group();
-                    this.scene.add(this.pivot);
-                },
+            // Load Model
+            const loader = new GLTFLoader();
+            loader.load(
+                '/models/golden_crown.glb',
+                (gltf) => {
+                    crown = gltf.scene;
 
-                loadCrownModel() {
-                    return new Promise((resolve, reject) => {
-                        const loader = new GLTFLoader();
-                        loader.load(
-                            '/models/golden_crown.glb',
-                            (gltf) => {
-                                this.crown = gltf.scene;
+                    // Center the crown model
+                    const box = new THREE.Box3().setFromObject(crown);
+                    const center = box.getCenter(new THREE.Vector3());
+                    crown.position.sub(center);
 
-                                // Center the crown model first
-                                const box = new THREE.Box3().setFromObject(this.crown);
-                                const center = box.getCenter(new THREE.Vector3());
-                                this.crown.position.sub(center);
-
-                                // Offset the crown from the pivot point
-                                this.crown.position.x = this.crownOffsetX;
-                                this.pivot.add(this.crown);
-                                resolve();
-                            },
-                            undefined,
-                            (error) => {
-                                console.error('An error occurred while loading the crown model:', error);
-                                reject(error);
-                            }
-                        );
+                    // Refine materials
+                    crown.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.metalness = 1.0;
+                            child.material.roughness = 0.2;
+                        }
                     });
+
+                    // Offset the crown from the pivot point
+                    crown.position.x = crownOffsetX;
+                    pivot.add(crown);
+
+                    setupPlayers();
                 },
+                undefined,
+                (error) => console.error('Error loading model:', error)
+            );
 
-                createStickFigure(name) {
-                    const group = new THREE.Group();
+            animate();
 
-                    const headGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-                    const headMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
-                    const head = new THREE.Mesh(headGeometry, headMaterial);
-                    head.position.y = 0.4;
-                    group.add(head);
+            // Bright pure red arrow - rendered in the same overlay layer as the labels
+            // so it can stay above the name tags reliably.
+            const pointerDiv = document.createElement('div');
+            pointerDiv.className = 'crown-pointer';
+            pointer = new CSS2DObject(pointerDiv);
+            pointer.renderOrder = 1000;
+            pointer.position.set(0, 3.5, 3.8);
+            scene.add(pointer);
 
-                    const bodyGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 16);
-                    const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
-                    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-                    body.position.y = 0.15;
-                    group.add(body);
+            window.addEventListener('resize', onWindowResize, false);
+            
+            const spinBtn = document.getElementById('spin-button');
+            if (spinBtn) {
+                spinBtn.addEventListener('click', handleButtonClick);
+                spinBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleButtonClick();
+                }, { passive: false });
+            }
 
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'label';
-                    nameDiv.textContent = name;
-                    const label = new CSS2DObject(nameDiv);
-                    label.position.set(0, 0.6, 0);
-                    group.add(label);
+            // Expose logic to Alpine
+            window.crownScene.spin = spin;
+            window.crownScene.reset = () => {
+                isReadyState = false;
+                if (spinBtn) {
+                   spinBtn.innerText = '{{ __('Spin') }}';
+                   spinBtn.disabled = false;
+                }
+                // Show pointer again when resetting
+                if (pointer) {
+                    pointer.visible = true;
+                }
+            };
 
-                    return group;
-                },
+            // Force initial sizing to be correct on mobile
+            setTimeout(onWindowResize, 100);
+        }
 
-                updatePlayers(names) {
-                    this.players = names;
-                    // Remove existing stick figures and their labels
-                    this.stickFigures.forEach(figure => {
-                        figure.children.forEach(child => {
-                            if (child instanceof CSS2DObject) {
-                                figure.remove(child);
-                            }
-                        });
-                        this.pivot.remove(figure); // Remove the stick figure group from the pivot
-                    });
-                    this.stickFigures = [];
+        function getPlayerColor(index, totalPlayers) {
+            // Using a more vibrant palette
+            const hue = (index * 137.5) % 360; // Golden angle for better distribution
+            return new THREE.Color(`hsl(${hue}, 85%, 60%)`);
+        }
 
-                    if (!names || names.length === 0) return;
+        function createStickFigure(name, color) {
+            const group = new THREE.Group();
 
-                    const angleBetweenTips = (2 * Math.PI) / this.TOTAL_CROWN_TIPS;
+            const bodyColor = new THREE.MeshBasicMaterial({ color: color });
+            const limbColor = new THREE.MeshBasicMaterial({ color: color.clone().multiplyScalar(0.85) });
+            const headColor = new THREE.MeshBasicMaterial({ color: color.clone().offsetHSL(0, 0, 0.05) });
 
-                    names.forEach((name, playerIndex) => {
-                        // Calculate which of the 9 tips this player should occupy
-                        const tipToOccupy = Math.floor(playerIndex * (this.TOTAL_CROWN_TIPS / names.length));
+            const headGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+            const head = new THREE.Mesh(headGeometry, headColor);
+            head.position.y = 0.45;
+            group.add(head);
 
-                        // Calculate the angle for this specific tip
-                        const angle = this.stickFigureStartAngleOffset + tipToOccupy * angleBetweenTips;
+            const bodyGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.45, 16);
+            const body = new THREE.Mesh(bodyGeometry, bodyColor);
+            body.position.y = 0.15;
+            group.add(body);
 
-                        const x = this.stickFigureRadius * Math.cos(angle);
-                        const z = this.stickFigureRadius * Math.sin(angle);
+            const armGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.32, 10);
+            const leftArm = new THREE.Mesh(armGeometry, limbColor);
+            leftArm.position.set(-0.16, 0.24, 0);
+            leftArm.rotation.z = 0.95;
+            group.add(leftArm);
 
-                        const stickFigure = this.createStickFigure(name);
-                        stickFigure.position.set(x, this.stickFigureHeight, z);
-                        stickFigure.rotation.y = -angle; // Make them face outwards from the center
+            const rightArm = new THREE.Mesh(armGeometry, limbColor);
+            rightArm.position.set(0.16, 0.24, 0);
+            rightArm.rotation.z = -0.95;
+            group.add(rightArm);
 
-                        this.pivot.add(stickFigure);
-                        this.stickFigures.push(stickFigure);
-                    });
-                },
+            const legGeometry = new THREE.CylinderGeometry(0.042, 0.042, 0.4, 10);
+            const leftLeg = new THREE.Mesh(legGeometry, limbColor);
+            leftLeg.position.set(-0.1, -0.18, 0);
+            leftLeg.rotation.z = 0.22;
+            group.add(leftLeg);
 
-                spin() {
-                    if (this.spinning || this.players.length === 0) return;
+            const rightLeg = new THREE.Mesh(legGeometry, limbColor);
+            rightLeg.position.set(0.1, -0.18, 0);
+            rightLeg.rotation.z = -0.22;
+            group.add(rightLeg);
 
-                    this.spinning = true;
-                    this.winner = null;
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'label';
+            nameDiv.textContent = name;
+            const label = new CSS2DObject(nameDiv);
+            label.position.set(0, 0.75, 0);
+            group.add(label);
 
-                    const randomSpins = Math.floor(Math.random() * 5) + 3; // 3 to 7 full spins
-                    const targetPlayerIndex = Math.floor(Math.random() * this.players.length);
+            return group;
+        }
 
-                    // Calculate the target angle based on the actual tip positions
-                    const angleBetweenTips = (2 * Math.PI) / this.TOTAL_CROWN_TIPS;
-                    const targetTipIndex = Math.floor(targetPlayerIndex * (this.TOTAL_CROWN_TIPS / this.players.length));
-                    const targetAngle = this.stickFigureStartAngleOffset + targetTipIndex * angleBetweenTips;
+        function setupPlayers() {
+            // Clear existing
+            stickFigures.forEach(f => pivot.remove(f));
+            stickFigures = [];
 
-                    const currentPivotRotationY = this.pivot.rotation.y;
-                    const finalPivotRotationY = currentPivotRotationY + (randomSpins * 2 * Math.PI) + (targetAngle - (currentPivotRotationY % (2 * Math.PI)));
+            if (!players || players.length === 0) return;
 
-                    new TWEEN.Tween(this.pivot.rotation)
-                        .to({ y: finalPivotRotationY }, this.spinDuration * 1000)
-                        .easing(TWEEN.Easing.Quadratic.Out)
-                        .onComplete(() => {
-                            this.spinning = false;
-                            this.determineWinner();
-                        })
-                        .start();
-                },
+            const angleBetweenTips = (2 * Math.PI) / TOTAL_CROWN_TIPS;
 
-                determineWinner() {
-                    const normalizedPivotRotationY = (this.pivot.rotation.y % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+            players.forEach((name, i) => {
+                const tipIndex = Math.floor(i * (TOTAL_CROWN_TIPS / players.length));
+                // Tip angle relative to crown center
+                const angle = stickFigureStartAngleOffset + tipIndex * angleBetweenTips;
 
+                const x = stickFigureRadius * Math.cos(angle);
+                const z = stickFigureRadius * Math.sin(angle);
+
+                const figure = createStickFigure(name, getPlayerColor(i, players.length));
+                figure.position.set(x, stickFigureHeight, z);
+                // Initial rotation - will be updated in animate() to face camera
+                figure.rotation.y = 0; 
+                
+                // Store data for winner calculation
+                figure.userData.angle = angle;
+                figure.userData.name = name;
+
+                pivot.add(figure);
+                stickFigures.push(figure);
+            });
+        }
+
+        function handleButtonClick() {
+            if (spinning || players.length === 0) return;
+            const btn = document.getElementById('spin-button');
+            if (!btn) return;
+
+            if (isReadyState) {
+                isReadyState = false;
+                btn.innerText = '{{ __('Spin') }}';
+                return;
+            }
+
+            spin();
+        }
+
+        function spin() {
+            spinning = true;
+            const btn = document.getElementById('spin-button');
+            if (btn) btn.disabled = true;
+
+            const spinDuration = 14000; // Slower, more dramatic
+            const randomRotation = (Math.random() * 4 + 8) * Math.PI * 2 + (Math.random() * Math.PI * 2);
+            const targetFinalRotation = pivot.rotation.y + randomRotation;
+
+            new TWEEN.Tween(pivot.rotation)
+                .to({ y: targetFinalRotation }, spinDuration)
+                .easing(TWEEN.Easing.Exponential.Out) // More dramatic slow-down
+                .onComplete(() => {
+                    spinning = false;
+                    
+                    // Determine which player is closest to the camera
                     let closestPlayer = null;
-                    let minDiff = Math.PI * 2;
+                    let minDistance = Infinity;
 
-                    this.players.forEach((player, playerIndex) => {
-                        const angleBetweenTips = (2 * Math.PI) / this.TOTAL_CROWN_TIPS;
-                        const tipToOccupy = Math.floor(playerIndex * (this.TOTAL_CROWN_TIPS / this.players.length));
-                        const playerTargetAngle = this.stickFigureStartAngleOffset + tipToOccupy * angleBetweenTips;
-
-                        const effectivePlayerAngle = (playerTargetAngle - normalizedPivotRotationY + (2 * Math.PI)) % (2 * Math.PI);
-
-                        let diff = Math.abs(effectivePlayerAngle - 0); // Pointer is at 0 degrees
-                        if (diff > Math.PI) {
-                            diff = (2 * Math.PI) - diff;
-                        }
-
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closestPlayer = player;
+                    stickFigures.forEach(figure => {
+                        const worldPos = new THREE.Vector3();
+                        figure.getWorldPosition(worldPos);
+                        const dist = worldPos.distanceTo(camera.position);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestPlayer = figure.userData.name;
                         }
                     });
 
-                    this.winner = closestPlayer || 'No one';
-                    fetch('/tools/save-winner', {
+                    const winner = closestPlayer;
+                    
+                    // Notify Alpine via standard DOM event
+                    const gameEl = document.getElementById('game-container');
+                    if (gameEl) {
+                        window.dispatchEvent(new CustomEvent('winner-calculated', { detail: winner }));
+                    }
+                    
+                    isReadyState = true;
+                    if (btn) {
+                        btn.innerText = 'Ready';
+                        btn.disabled = false;
+                    }
+                    
+                    // Hide pointer during winner screen
+                    if (pointer) {
+                        pointer.visible = false;
+                    }
+                    
+                    saveWinner(winner);
+                })
+                .start();
+        }
+
+        function saveWinner(winner) {
+            console.log('saveWinner called with winner:', winner);
+            fetch('/tools/save-winner', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ winner: winner })
+            }).then(() => {
+                console.log('Fetch request successful');
+                try {
+                    const noWinsText = document.getElementById('no-wins-text');
+                    console.log('noWinsText element:', noWinsText);
+                    if (noWinsText) {
+                        noWinsText.classList?.add('hidden');
+                        if (noWinsText.style) {
+                            noWinsText.style.display = 'none';
+                        }
+                    }
+                    
+                    let list = document.getElementById('scoreboard-list');
+                    console.log('scoreboard-list element:', list);
+                    if (!list) {
+                        console.log('scoreboard-list not found, returning');
+                        return;
+                    }
+                    
+                    if (list.classList) {
+                        list.classList.remove('hidden');
+                    }
+
+                    let existingLi = list.querySelector(`li[data-player="${winner}"]`);
+
+                    if (existingLi) {
+                        let countSpan = existingLi.querySelector('.win-count');
+                        if (countSpan) {
+                            let currentWins = parseInt(countSpan.innerText);
+                            countSpan.innerText = (currentWins + 1) + ' WINS';
+                        }
+                    } else {
+                        let li = document.createElement('li');
+                        li.className = 'flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-100 dark:border-gray-600 group hover:border-amber-400 transition-all duration-300 hover:shadow-md';
+                        li.setAttribute('data-player', winner);
+                        let iteration = list.querySelectorAll('li').length + 1;
+                        li.innerHTML = `
+                            <div class="flex items-center gap-4">
+                                <span class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-700 dark:text-amber-400 font-black text-sm">
+                                    ${iteration}
+                                </span>
+                                <span class="text-gray-800 dark:text-gray-100 font-extrabold text-lg">${winner}</span>
+                            </div>
+                            <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">1 WINS</span>`;
+                        list.appendChild(li);
+                    }
+                    
+                    let items = Array.from(list.querySelectorAll('li'));
+                    items.sort((a, b) => {
+                        let countA = parseInt(a.querySelector('.win-count')?.innerText || 0);
+                        let countB = parseInt(b.querySelector('.win-count')?.innerText || 0);
+                        return countB - countA;
+                    });
+                    list.innerHTML = '';
+                    items.forEach((item, index) => {
+                        let spanElem = item.querySelector('div span:first-child');
+                        if (spanElem) {
+                            spanElem.innerText = index + 1;
+                        }
+                        list.appendChild(item);
+                    });
+
+                    console.log('Scoreboard updated but not opened automatically');
+                } catch (err) {
+                    console.error('Error updating scoreboard:', err);
+                }
+
+            }).catch(e => console.error('Failed to save winner', e));
+        }
+
+        function onWindowResize() {
+            const gameContainer = document.getElementById('game-container');
+            camera.aspect = gameContainer.clientWidth / gameContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
+            labelRenderer.setSize(gameContainer.clientWidth, gameContainer.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (TWEEN) TWEEN.update(); // Guard TWEEN update
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+            
+            // Make stick figures face the camera
+            stickFigures.forEach(figure => {
+                // The figure is a child of the pivot.
+                // We want the figure's world rotation to face the camera.
+                // A simple trick: set the figure's world rotation to match camera direction
+                // Or just compensate for the pivot's rotation.
+                
+                // Get world position of figure
+                const worldPos = new THREE.Vector3();
+                figure.getWorldPosition(worldPos);
+                
+                // Vector from figure to camera (planar)
+                const dx = camera.position.x - worldPos.x;
+                const dz = camera.position.z - worldPos.z;
+                const worldAngle = Math.atan2(dx, dz);
+                
+                // The figure's local rotation.y + pivot.rotation.y = worldAngle
+                figure.rotation.y = worldAngle - pivot.rotation.y;
+            });
+
+            if (pointer) {
+                pointer.position.y = 3.5 + Math.sin(Date.now() * 0.004) * 0.15;
+            }
+
+            // Idle rotation when not spinning or in ready state
+            if (!spinning && !isReadyState) {
+                pivot.rotation.y += 0.002;
+            }
+        }
+
+        init();
+    </script>
+
+    <script>
+        // Alpine Component for Crown Game UI (Decoupled from Three.js module to prevent blocking failures)
+        document.addEventListener('alpine:init', () => {
+            console.log('Alpine initialized');
+            Alpine.data('crownGame', () => ({
+                gameState: 'playing', // playing, winner, overall_winner
+                winnerName: '',
+                eliminatedPlayer: '',
+                lastPickedPlayer: '',
+                lmsActive: {{ $lmsActive ? 'true' : 'false' }},
+
+                initGame() {
+                    console.log('initGame called');
+                    @if(isset($overallWinner))
+                        this.winnerName = '{{ $overallWinner }}';
+                        this.gameState = 'overall_winner';
+                    @endif
+                },
+
+                showWinner(name) {
+                    console.log('showWinner called with name:', name);
+                    this.winnerName = name;
+                    this.lastPickedPlayer = name;
+                    this.eliminatedPlayer = name;
+                    
+                    if (this.lmsActive) {
+                        this.gameState = 'eliminated';
+                    } else {
+                        this.gameState = 'winner';
+                    }
+                    
+                    if (this.lmsActive) {
+                        // After delay, reload to check for overall winner
+                        setTimeout(() => {
+                           // Actually, saveWinner logic in backend checks for overall winner.
+                           // We need to fetch current round status.
+                           this.checkLmsStatus();
+                        }, 2000);
+                    }
+                },
+
+                checkLmsStatus() {
+                    // Simple approach: reload after saving.
+                    // The saveWinner function is called in the module script.
+                },
+
+                resetGame() {
+                    if (this.lmsActive) {
+                        window.location.reload(); // Reload to get updated player list (minus eliminated)
+                        return;
+                    }
+                    console.log('resetGame called');
+                    this.gameState = 'playing';
+                    this.winnerName = '';
+                    this.lastPickedPlayer = '';
+                    this.eliminatedPlayer = '';
+                    if (window.crownScene && window.crownScene.reset) {
+                        window.crownScene.reset();
+                    }
+                },
+
+                resetRound() {
+                    fetch('{{ route('tools.reset-lms') }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({ winner: this.winner })
-                    });
-                },
-
-                animate() {
-                    requestAnimationFrame(() => this.animate());
-                    this.renderer.render(this.scene, this.camera);
-                    this.labelRenderer.render(this.scene, this.camera);
-                    TWEEN.update();
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    }).then(() => window.location.reload());
                 }
             }));
         });
     </script>
-    @endpush
 </x-app-layout>
+
