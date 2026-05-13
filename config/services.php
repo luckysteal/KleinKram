@@ -31,4 +31,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'german_verbs' => [
+        'url' => env('GERMAN_VERBS_API_URL', 'https://german-verbs-api.onrender.com/german-verbs-api'),
+    ],
+
 ];
