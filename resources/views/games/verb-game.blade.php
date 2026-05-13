@@ -289,7 +289,7 @@
                     if (!v || (this.solutions[v] && this.solutions[v][this.currentTense])) return;
                     this.loading = true;
                     try {
-                        const response = await fetch(`https://german-verbs-api.onrender.com/german-verbs-api?verb=${v.toLowerCase()}`);
+                        const response = await fetch(`/api/conjugate?verb=${v.toLowerCase()}`);
                         const result = await response.json();
                         if (result.success && result.data) {
                             const d = result.data;
