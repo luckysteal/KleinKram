@@ -59,6 +59,9 @@
                                 <x-dropdown-link :href="route('tools.snake-pit')">
                                     {{ __('Snake Pit') }}
                                 </x-dropdown-link>
+                                <x-dropdown-link :href="route('tools.schlossgraben-jump')">
+                                    {{ __('Schlossgraben Jump') }}
+                                </x-dropdown-link>
                                 <x-dropdown-link :href="route('tools.player-selection')">
                                     {{ __('Player Selection') }}
                                 </x-dropdown-link>
@@ -229,6 +232,10 @@
                 <x-responsive-nav-link :href="route('tools.snake-pit')"
                     :active="request()->routeIs('tools.snake-pit')">
                     {{ __('Snake Pit') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('tools.schlossgraben-jump')"
+                    :active="request()->routeIs('tools.schlossgraben-jump')">
+                    {{ __('Schlossgraben Jump') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('tools.player-selection')"
                     :active="request()->routeIs('tools.player-selection')">

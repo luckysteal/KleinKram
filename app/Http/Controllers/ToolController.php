@@ -53,6 +53,11 @@ class ToolController extends Controller
         return view('tools.snake-pit', $this->getGameData());
     }
 
+    public function schlossgrabenJump()
+    {
+        return view('tools.schlossgraben-jump', $this->getGameData());
+    }
+
     private function getGameData()
     {
         $players = Session::get('players_list', []);
@@ -67,7 +72,8 @@ class ToolController extends Controller
             'tools.hi-low',
             'tools.ticking-bomb',
             'tools.russian-roulette',
-            'tools.snake-pit'
+            'tools.snake-pit',
+            'tools.schlossgraben-jump'
         ])) {
             Session::put('last_game_route', $currentRoute);
         }

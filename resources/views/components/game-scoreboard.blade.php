@@ -85,13 +85,13 @@
 
                     <!-- Winners Tally Section -->
                     <div class="space-y-4 {{ $lmsActive ? 'mt-12 pt-12 border-t border-gray-100 dark:border-gray-700' : '' }}">
-                        <h4 class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">{{ __('Global Wins') }}</h4>
+                        <h4 class="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">{{ __('Global Fails') }}</h4>
                         
-                        <div id="no-wins-text" class="flex flex-col items-center justify-center py-12 text-center space-y-4 opacity-50 {{ !empty($winnersTally) ? 'hidden' : '' }}">
+                        <div id="no-fails-text" class="flex flex-col items-center justify-center py-12 text-center space-y-4 opacity-50 {{ !empty($winnersTally) ? 'hidden' : '' }}">
                             <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                 <i class="fas fa-medal text-gray-300 text-2xl"></i>
                             </div>
-                            <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{{ __('No winners recorded yet') }}</p>
+                            <p class="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{{ __('No failures recorded yet') }}</p>
                         </div>
 
                         <ul id="scoreboard-list" class="space-y-3 {{ empty($winnersTally) ? 'hidden' : '' }}">
@@ -104,7 +104,7 @@
                                         <span class="text-gray-800 dark:text-gray-100 font-extrabold text-lg">{{ $playerName }}</span>
                                     </div>
                                     <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">
-                                        {{ $wins }} {{ __('WINS') }}
+                                        {{ $wins }} {{ __('FAILS') }}
                                     </span>
                                 </li>
                             @endforeach
@@ -114,7 +114,7 @@
 
                 <!-- Footer -->
                 <div class="p-8 bg-gray-50/50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700 text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">{{ __('Winners are tracked per session') }}</p>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">{{ __('Failures are tracked per session') }}</p>
                 </div>
             </div>
         </div>

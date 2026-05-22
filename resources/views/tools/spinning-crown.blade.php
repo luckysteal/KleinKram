@@ -577,7 +577,7 @@
                     }
                 }
                 try {
-                    const noWinsText = document.getElementById('no-wins-text');
+                    const noWinsText = document.getElementById('no-fails-text');
                     console.log('noWinsText element:', noWinsText);
                     if (noWinsText) {
                         noWinsText.classList?.add('hidden');
@@ -603,7 +603,7 @@
                         let countSpan = existingLi.querySelector('.win-count');
                         if (countSpan) {
                             let currentWins = parseInt(countSpan.innerText);
-                            countSpan.innerText = (currentWins + 1) + ' WINS';
+                            countSpan.innerText = (currentWins + 1) + ' {{ __('FAILS') }}';
                         }
                     } else {
                         let li = document.createElement('li');
@@ -617,7 +617,7 @@
                                 </span>
                                 <span class="text-gray-800 dark:text-gray-100 font-extrabold text-lg">${winner}</span>
                             </div>
-                            <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">1 WINS</span>`;
+                            <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">1 {{ __('FAILS') }}</span>`;
                         list.appendChild(li);
                     }
                     
