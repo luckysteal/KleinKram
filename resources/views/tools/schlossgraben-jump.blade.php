@@ -41,7 +41,7 @@
 
                                 <div class="space-y-2 max-w-md w-full">
                                     <label class="block text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">{{ __('Enter your name') }}</label>
-                                    <input type="text" x-model="singlePlayerName" @input="currentPlayer = singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-855 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm dark:text-white text-center font-bold" placeholder="{{ __('Knight') }}">
+                                    <input type="text" x-model="singlePlayerName" @input="currentPlayer = singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-gray-900 dark:text-white text-center font-bold" placeholder="{{ __('Knight') }}">
                                 </div>
 
                                 <div class="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
@@ -320,7 +320,7 @@
                                 <p class="text-xs text-purple-500 dark:text-purple-400 uppercase tracking-widest font-black">{{ __('Your Score:') }} <span class="text-2xl ml-1 text-purple-600 dark:text-purple-400 font-extrabold" x-text="history.length"></span></p>
                                 
                                 <div x-show="!singlePlayerSubmitted" class="flex flex-col sm:flex-row gap-2 items-center w-full">
-                                    <input type="text" x-model="singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm dark:text-white" placeholder="{{ __('Enter your name') }}">
+                                    <input type="text" x-model="singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm text-gray-900 dark:text-white" placeholder="{{ __('Enter your name') }}">
                                     <button @click="submitSinglePlayerScore()" :disabled="saving || !singlePlayerName.trim()" class="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/25 whitespace-nowrap text-sm uppercase tracking-wider flex items-center justify-center">
                                         <span x-show="!saving">{{ __('Submit Score') }}</span>
                                         <span x-show="saving"><i class="fas fa-spinner animate-spin mr-2"></i>{{ __('Saving...') }}</span>
