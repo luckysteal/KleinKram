@@ -13,255 +13,338 @@
                 </x-game-header>
 
                 <div class="flex-grow flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden relative">
-                    <!-- If players.length < 3 -->
-                    <template x-if="players.length < 3">
-                        <div class="text-center space-y-6 max-w-md p-8 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xl">
-                            <div class="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mx-auto text-purple-600 dark:text-purple-400 text-4xl animate-bounce">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="space-y-2">
-                                <h3 class="text-2xl font-black dark:text-white uppercase tracking-tighter italic text-gray-900">{{ __('Min. 3 Players Required') }}</h3>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ __('Schlossgraben Jump is a group game. You need at least 3 players to start the rotation and pass the phone around!') }}
-                                </p>
-                            </div>
-                            <a href="{{ route('tools.player-selection') }}" class="inline-flex items-center justify-center px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
-                                <i class="fas fa-users-cog mr-2"></i>
-                                {{ __('Manage Players') }}
-                            </a>
-                        </div>
-                    </template>
-
-                    <!-- Main Game Wrapper (when players.length >= 3) -->
-                    <template x-if="players.length >= 3">
-                        <div class="w-full max-w-3xl flex flex-col items-center space-y-6">
+                    <div class="w-full max-w-3xl flex flex-col items-center space-y-6">
+                        
+                        <!-- State 1: Ready Screen -->
+                        <div x-show="gameState === 'ready'" class="w-full text-center space-y-8 bg-gray-50/50 dark:bg-gray-800/40 p-8 rounded-3xl border border-gray-100 dark:border-gray-700/50 backdrop-blur-xl shadow-xl flex flex-col items-center">
                             
-                            <!-- State 1: Ready Screen -->
-                            <div x-show="gameState === 'ready'" class="w-full text-center space-y-8 bg-gray-50/50 dark:bg-gray-800/40 p-8 rounded-3xl border border-gray-100 dark:border-gray-700/50 backdrop-blur-xl shadow-xl flex flex-col items-center">
+                            <!-- Mode Toggle Tab (only shown on first round) -->
+                            <div x-show="history.length === 0" class="flex p-1 bg-gray-100 dark:bg-gray-900/50 rounded-2xl w-full max-w-md select-none border border-gray-200/50 dark:border-gray-700/30">
+                                <button @click="setMainMode('single')"
+                                        :class="gameMainMode === 'single' ? 'bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 shadow-md ring-1 ring-black/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                                        class="flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all select-none">
+                                    {{ __('Single Player') }}
+                                </button>
+                                <button @click="setMainMode('multi')"
+                                        :class="gameMainMode === 'multi' ? 'bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 shadow-md ring-1 ring-black/5' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                                        class="flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all select-none">
+                                    {{ __('Pass & Play (Multiplayer)') }}
+                                </button>
+                            </div>
+
+                            <!-- SINGLE PLAYER SUB-SCREEN -->
+                            <div x-show="gameMainMode === 'single'" class="w-full flex flex-col items-center space-y-6">
                                 <div class="space-y-1">
-                                    <span class="text-xs font-black uppercase tracking-[0.2em] text-purple-500 dark:text-purple-400" x-text="'{{ __('Turn') }} #' + (history.length + 1)"></span>
                                     <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">{{ __('Ready for Schlossgraben Jump?') }}</h2>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold">{{ __('Single Player Mode') }}</p>
                                 </div>
 
-                                <!-- Game Mode Selector (Only on first round) -->
-                                <div x-show="history.length === 0" class="w-full max-w-md space-y-4">
-                                    <label class="block text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">{{ __('Select Game Mode') }}</label>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <!-- Continuous Mode Card -->
-                                        <div @click="gameMode = 'continuous'" 
-                                             :class="gameMode === 'continuous' ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/5 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100/50 dark:hover:bg-gray-800/30'"
-                                             class="p-4 rounded-2xl border text-left cursor-pointer transition-all duration-200 select-none flex flex-col justify-between">
-                                            <div>
-                                                <div class="flex items-center justify-between mb-1">
-                                                    <span class="font-extrabold text-sm dark:text-white">{{ __('Continuous Mode') }}</span>
-                                                    <span x-show="gameMode === 'continuous'" class="text-purple-500 text-xs"><i class="fas fa-check-circle"></i></span>
-                                                </div>
-                                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
-                                                    {{ __('No breaks! The countdown starts automatically. Hand over the phone quickly. If you fail, you AND the player who passed you the phone lose!') }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <!-- Calm Mode Card -->
-                                        <div @click="gameMode = 'calm'" 
-                                             :class="gameMode === 'calm' ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/5 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100/50 dark:hover:bg-gray-800/30'"
-                                             class="p-4 rounded-2xl border text-left cursor-pointer transition-all duration-200 select-none flex flex-col justify-between">
-                                            <div>
-                                                <div class="flex items-center justify-between mb-1">
-                                                    <span class="font-extrabold text-sm dark:text-white">{{ __('Calm Mode') }}</span>
-                                                    <span x-show="gameMode === 'calm'" class="text-purple-500 text-xs"><i class="fas fa-check-circle"></i></span>
-                                                </div>
-                                                <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
-                                                    {{ __('Take your time. Each player clicks \'Ready\' when they are holding the phone. Only the player who fails is eliminated.') }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="p-6 bg-purple-500/10 dark:bg-purple-500/5 border border-purple-500/20 rounded-2xl max-w-md w-full">
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold mb-2">{{ __('Hand smartphone to') }}</p>
-                                    <h3 class="text-4xl font-black text-purple-600 dark:text-purple-400 uppercase tracking-tighter italic animate-pulse" x-text="currentPlayer"></h3>
+                                <div class="space-y-2 max-w-md w-full">
+                                    <label class="block text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">{{ __('Enter your name') }}</label>
+                                    <input type="text" x-model="singlePlayerName" @input="currentPlayer = singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-855 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm dark:text-white text-center font-bold" placeholder="{{ __('Knight') }}">
                                 </div>
 
                                 <div class="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
                                     <p>{{ __('Tap the button below. You will have a 1-second countdown to prepare, then jump by tapping the screen!') }}</p>
                                 </div>
 
-                                <button @click="startCountdown()" class="w-full max-w-md py-5 bg-purple-600 hover:bg-purple-700 text-white font-black text-2xl rounded-2xl shadow-[0_15px_30px_rgba(147,51,234,0.3)] transition-all active:scale-95 active:translate-y-1 uppercase tracking-tighter">
+                                <button @click="startCountdown()" :disabled="!singlePlayerName.trim()" class="w-full max-w-md py-5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-black text-2xl rounded-2xl shadow-[0_15px_30px_rgba(147,51,234,0.3)] transition-all active:scale-95 active:translate-y-1 uppercase tracking-tighter">
                                     {{ __('I am Ready! ➔') }}
                                 </button>
+
+                                <!-- Global Leaderboard -->
+                                <div class="w-full max-w-md bg-white dark:bg-gray-900/40 p-6 rounded-3xl border border-gray-150 dark:border-gray-800/80 shadow-md space-y-4 text-center mt-4">
+                                    <h3 class="text-xs font-black uppercase tracking-widest text-purple-500 dark:text-purple-400"><i class="fas fa-trophy mr-2"></i>{{ __('Global Leaderboard') }}</h3>
+                                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                                        <table class="w-full text-xs text-left text-gray-500 dark:text-gray-400">
+                                            <thead class="text-[10px] text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+                                                <tr>
+                                                    <th scope="col" class="px-2 py-2 text-center">{{ __('Rank') }}</th>
+                                                    <th scope="col" class="px-4 py-2">{{ __('Player') }}</th>
+                                                    <th scope="col" class="px-4 py-2 text-right">{{ __('Score') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="(entry, index) in leaderboard" :key="entry.id">
+                                                    <tr class="border-b border-gray-50 dark:border-gray-800/30 last:border-none">
+                                                        <td class="px-2 py-2.5 font-bold text-center text-purple-500" x-text="index + 1"></td>
+                                                        <td class="px-4 py-2.5 font-semibold dark:text-white uppercase tracking-tight" x-text="entry.player_name"></td>
+                                                        <td class="px-4 py-2.5 font-black text-right text-green-500 text-sm" x-text="entry.score"></td>
+                                                    </tr>
+                                                </template>
+                                                <template x-if="!leaderboard || leaderboard.length === 0">
+                                                    <tr>
+                                                        <td colspan="3" class="px-4 py-8 text-center text-gray-400">{{ __('No high scores yet. Be the first!') }}</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- State 2: Canvas / Gameplay -->
-                            <div x-show="gameState === 'countdown' || gameState === 'playing' || gameState === 'success' || gameState === 'failed' || gameState === 'handover'" class="w-full flex flex-col items-center space-y-4" style="display: none;">
+                            <!-- MULTIPLAYER SUB-SCREEN -->
+                            <div x-show="gameMainMode === 'multi'" class="w-full flex flex-col items-center space-y-6">
+                                <!-- Case 1: Min 3 players required -->
+                                <div x-show="players.length < 3" class="text-center space-y-6 max-w-md p-8 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-xl w-full flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400 text-4xl animate-bounce">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <h3 class="text-2xl font-black dark:text-white uppercase tracking-tighter italic text-gray-900">{{ __('Min. 3 Players Required') }}</h3>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                                            {{ __('Schlossgraben Jump is a group game. You need at least 3 players to start the rotation and pass the phone around!') }}
+                                        </p>
+                                    </div>
+                                    <a href="{{ route('tools.player-selection') }}" class="inline-flex items-center justify-center px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 text-sm uppercase tracking-wider">
+                                        <i class="fas fa-users-cog mr-2"></i>
+                                        {{ __('Manage Players') }}
+                                    </a>
+                                </div>
+
+                                <!-- Case 2: Enough players, show setup -->
+                                <div x-show="players.length >= 3" class="w-full flex flex-col items-center space-y-6">
+                                    <div class="space-y-1">
+                                        <span class="text-xs font-black uppercase tracking-[0.2em] text-purple-500 dark:text-purple-400" x-text="'{{ __('Turn') }} #' + (history.length + 1)"></span>
+                                        <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">{{ __('Ready for Schlossgraben Jump?') }}</h2>
+                                    </div>
+
+                                    <!-- Game Mode Selector (Only on first round) -->
+                                    <div x-show="history.length === 0" class="w-full max-w-md space-y-4">
+                                        <label class="block text-xs font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">{{ __('Select Game Mode') }}</label>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <!-- Continuous Mode Card -->
+                                            <div @click="gameMode = 'continuous'" 
+                                                 :class="gameMode === 'continuous' ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/5 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100/50 dark:hover:bg-gray-800/30'"
+                                                 class="p-4 rounded-2xl border text-left cursor-pointer transition-all duration-200 select-none flex flex-col justify-between">
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-1">
+                                                        <span class="font-extrabold text-sm dark:text-white">{{ __('Continuous Mode') }}</span>
+                                                        <span x-show="gameMode === 'continuous'" class="text-purple-500 text-xs"><i class="fas fa-check-circle"></i></span>
+                                                    </div>
+                                                    <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
+                                                        {{ __('No breaks! The countdown starts automatically. Hand over the phone quickly. If you fail, you AND the player who passed you the phone lose!') }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <!-- Calm Mode Card -->
+                                            <div @click="gameMode = 'calm'" 
+                                                 :class="gameMode === 'calm' ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/5 ring-2 ring-purple-500/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100/50 dark:hover:bg-gray-800/30'"
+                                                 class="p-4 rounded-2xl border text-left cursor-pointer transition-all duration-200 select-none flex flex-col justify-between">
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-1">
+                                                        <span class="font-extrabold text-sm dark:text-white">{{ __('Calm Mode') }}</span>
+                                                        <span x-show="gameMode === 'calm'" class="text-purple-500 text-xs"><i class="fas fa-check-circle"></i></span>
+                                                    </div>
+                                                    <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
+                                                        {{ __('Take your time. Each player clicks \'Ready\' when they are holding the phone. Only the player who fails is eliminated.') }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-6 bg-purple-500/10 dark:bg-purple-500/5 border border-purple-500/20 rounded-2xl max-w-md w-full">
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold mb-2">{{ __('Hand smartphone to') }}</p>
+                                        <h3 class="text-4xl font-black text-purple-600 dark:text-purple-400 uppercase tracking-tighter italic animate-pulse" x-text="currentPlayer"></h3>
+                                    </div>
+
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                                        <p>{{ __('Tap the button below. You will have a 1-second countdown to prepare, then jump by tapping the screen!') }}</p>
+                                    </div>
+
+                                    <button @click="startCountdown()" class="w-full max-w-md py-5 bg-purple-600 hover:bg-purple-700 text-white font-black text-2xl rounded-2xl shadow-[0_15px_30px_rgba(147,51,234,0.3)] transition-all active:scale-95 active:translate-y-1 uppercase tracking-tighter">
+                                        {{ __('I am Ready! ➔') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- State 2: Canvas / Gameplay -->
+                        <div x-show="gameState === 'countdown' || gameState === 'playing' || gameState === 'success' || gameState === 'failed' || gameState === 'handover'" class="w-full flex flex-col items-center space-y-4" style="display: none;">
+                            
+                            <!-- Top Bar (Active Player, Next Player & Mode) -->
+                            <div class="w-full flex flex-col sm:flex-row justify-between items-center px-4 gap-2">
+                                <!-- Current Jumper -->
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
+                                    <span class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ __('Jumper:') }}</span>
+                                    <span class="font-extrabold text-sm dark:text-white uppercase tracking-tight" x-text="currentPlayer"></span>
+                                </div>
+
+                                <!-- Jumps count and Mode Badge -->
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border text-xs"
+                                          :class="gameMainMode === 'single' ? 'border-purple-500/30 bg-purple-500/10 text-purple-500' : (gameMode === 'continuous' ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' : 'border-blue-500/30 bg-blue-500/10 text-blue-500')"
+                                          x-text="gameMainMode === 'single' ? '{{ __('Single Player') }}' : (gameMode === 'continuous' ? '{{ __('Continuous Mode') }}' : '{{ __('Calm Mode') }}')"></span>
+                                    <span class="text-xs font-black uppercase tracking-wider text-purple-500" x-text="gameMainMode === 'single' ? '{{ __('Score') }}: ' + history.length : '{{ __('Jumps') }}: ' + history.length"></span>
+                                </div>
+                            </div>
+
+                            <!-- Canvas Container -->
+                            <div class="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-[#0c0728] rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-2xl touch-none">
+                                <canvas id="gameCanvas" @mousedown="onJumpTrigger" @touchstart.prevent="onJumpTrigger" class="w-full h-full block cursor-pointer"></canvas>
                                 
-                                <!-- Top Bar (Active Player, Next Player & Mode) -->
-                                <div class="w-full flex flex-col sm:flex-row justify-between items-center px-4 gap-2">
-                                    <!-- Current Jumper -->
-                                    <div class="flex items-center gap-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
-                                        <span class="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{{ __('Jumper:') }}</span>
-                                        <span class="font-extrabold text-sm dark:text-white uppercase tracking-tight" x-text="currentPlayer"></span>
-                                    </div>
-
-                                    <!-- Jumps count and Mode Badge -->
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border text-xs"
-                                              :class="gameMode === 'continuous' ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' : 'border-blue-500/30 bg-blue-500/10 text-blue-500'"
-                                              x-text="gameMode === 'continuous' ? '{{ __('Continuous Mode') }}' : '{{ __('Calm Mode') }}'"></span>
-                                        <span class="text-xs font-black uppercase tracking-wider text-purple-500" x-text="'{{ __('Jumps') }}: ' + history.length"></span>
+                                <!-- Countdown Overlay -->
+                                <div x-show="gameState === 'countdown'" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+                                    <div class="text-center">
+                                        <div class="text-8xl font-black text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] animate-ping" x-text="countdownText"></div>
+                                        <div class="mt-4 text-xs font-bold uppercase tracking-widest text-white/50">{{ __('Get Ready!') }}</div>
                                     </div>
                                 </div>
 
-                                <!-- Canvas Container -->
-                                <div class="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-[#0c0728] rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-2xl touch-none">
-                                    <canvas id="gameCanvas" @mousedown="onJumpTrigger" @touchstart.prevent="onJumpTrigger" class="w-full h-full block cursor-pointer"></canvas>
-                                    
-                                    <!-- Countdown Overlay -->
-                                    <div x-show="gameState === 'countdown'" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-                                        <div class="text-center">
-                                            <div class="text-8xl font-black text-purple-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.6)] animate-ping" x-text="countdownText"></div>
-                                            <div class="mt-4 text-xs font-bold uppercase tracking-widest text-white/50">{{ __('Get Ready!') }}</div>
+                                <!-- Handover Overlay (Continuous Mode only) -->
+                                <div x-show="gameState === 'handover'" class="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center">
+                                    <div class="text-center space-y-6 max-w-md px-4 w-full">
+                                        <div class="space-y-1">
+                                            <span class="text-xs font-black uppercase tracking-[0.2em] text-amber-500 animate-pulse">
+                                                {{ __('PASS THE SMARTPHONE!') }}
+                                            </span>
+                                            <h3 class="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight">
+                                                 {{ __('Hand smartphone to') }}
+                                            </h3>
+                                            <h2 class="text-4xl sm:text-5xl font-black text-purple-400 uppercase tracking-tighter italic animate-bounce" x-text="currentPlayer"></h2>
                                         </div>
-                                    </div>
-
-                                    <!-- Handover Overlay (Continuous Mode only) -->
-                                    <div x-show="gameState === 'handover'" class="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center">
-                                        <div class="text-center space-y-6 max-w-md px-4 w-full">
-                                            <div class="space-y-1">
-                                                <span class="text-xs font-black uppercase tracking-[0.2em] text-amber-500 animate-pulse">
-                                                    {{ __('PASS THE SMARTPHONE!') }}
-                                                </span>
-                                                <h3 class="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight">
-                                                     {{ __('Hand smartphone to') }}
-                                                </h3>
-                                                <h2 class="text-4xl sm:text-5xl font-black text-purple-400 uppercase tracking-tighter italic animate-bounce" x-text="currentPlayer"></h2>
-                                            </div>
-                                            
-                                            <!-- Shrinking Progress Bar -->
-                                            <div class="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700 relative shadow-inner">
-                                                <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 h-full transition-all duration-75" :style="`width: ${handoverProgress}%`"></div>
-                                            </div>
-                                            <div class="text-[10px] sm:text-xs text-white/60 font-medium">
-                                                <p>{{ __('Time is shrinking! Get ready to jump immediately!') }}</p>
-                                            </div>
+                                        
+                                        <!-- Shrinking Progress Bar -->
+                                        <div class="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700 relative shadow-inner">
+                                            <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 h-full transition-all duration-75" :style="`width: ${handoverProgress}%`"></div>
                                         </div>
-                                    </div>
-
-                                    <!-- Success Overlay -->
-                                    <div x-show="gameState === 'success'" class="absolute inset-0 bg-green-950/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-                                        <div class="text-center">
-                                            <div class="text-5xl font-black text-green-400 uppercase tracking-tighter italic drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-bounce">{{ __('CROSSING SUCCESSFUL!') }}</div>
-                                            <div class="mt-2 text-xs font-bold uppercase tracking-widest text-white/80" x-text="'{{ __('Great jump,') }} ' + currentPlayer + '!'"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Failed Splash Overlay -->
-                                    <div x-show="gameState === 'failed' && showSplashOverlay" class="absolute inset-0 bg-rose-950/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-                                        <div class="text-center animate-pulse">
-                                            <div class="text-6xl font-black text-rose-500 uppercase tracking-tighter italic drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">{{ __('SPLASH!') }}</div>
-                                            <div class="mt-2 text-xs font-bold uppercase tracking-widest text-white/85">{{ __('Fell in the Schlossgraben!') }}</div>
+                                        <div class="text-[10px] sm:text-xs text-white/60 font-medium">
+                                            <p>{{ __('Time is shrinking! Get ready to jump immediately!') }}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-center text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold">
-                                    {{ __('Click/Tap anywhere on the area to jump') }}
+                                <!-- Success Overlay -->
+                                <div x-show="gameState === 'success'" class="absolute inset-0 bg-green-950/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+                                    <div class="text-center">
+                                        <div class="text-5xl font-black text-green-400 uppercase tracking-tighter italic drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-bounce">{{ __('CROSSING SUCCESSFUL!') }}</div>
+                                        <div class="mt-2 text-xs font-bold uppercase tracking-widest text-white/80" x-text="'{{ __('Great jump,') }} ' + currentPlayer + '!'"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Failed Splash Overlay -->
+                                <div x-show="gameState === 'failed' && showSplashOverlay" class="absolute inset-0 bg-rose-950/80 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+                                    <div class="text-center animate-pulse">
+                                        <div class="text-6xl font-black text-rose-500 uppercase tracking-tighter italic drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">{{ __('SPLASH!') }}</div>
+                                        <div class="mt-2 text-xs font-bold uppercase tracking-widest text-white/85">{{ __('Fell in the Schlossgraben!') }}</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- State 3: Game Over Screen -->
-                            <div x-show="gameState === 'game_over'" class="w-full text-center space-y-8 bg-rose-900/10 dark:bg-rose-950/20 p-8 rounded-3xl border border-rose-500/20 backdrop-blur-xl shadow-xl flex flex-col items-center" style="display: none;">
-                                <div class="w-24 h-24 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 border border-rose-500/30 shadow-lg shadow-rose-500/10 animate-bounce">
-                                    <i class="fas fa-skull text-5xl"></i>
-                                </div>
+                            <div class="text-center text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold">
+                                {{ __('Click/Tap anywhere on the area to jump') }}
+                            </div>
+                        </div>
 
-                                <div class="space-y-2">
-                                    <h2 class="text-4xl font-black text-rose-500 uppercase tracking-tight italic">{{ __('GAME OVER') }}</h2>
-                                    <p class="text-gray-600 dark:text-gray-400 font-medium" x-html="'<strong>' + currentPlayer + '</strong> ' + '{{ __('failed to jump the Schlossgraben!') }}'"></p>
-                                </div>
+                        <!-- State 3: Game Over Screen -->
+                        <div x-show="gameState === 'game_over'" class="w-full text-center space-y-8 bg-rose-900/10 dark:bg-rose-950/20 p-8 rounded-3xl border border-rose-500/20 backdrop-blur-xl shadow-xl flex flex-col items-center" style="display: none;">
+                            <div class="w-24 h-24 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 border border-rose-500/30 shadow-lg shadow-rose-500/10 animate-bounce">
+                                <i class="fas fa-skull text-5xl"></i>
+                            </div>
 
-                                <!-- Jump Sequence Timeline -->
-                                <div class="w-full bg-white dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50">
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold mb-4">{{ __('Jump Sequence') }}</p>
-                                    <div class="flex flex-wrap items-center justify-center gap-3 text-sm">
-                                        <template x-for="(name, index) in history" :key="index">
-                                            <div class="flex items-center gap-2">
-                                                <span class="px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 font-bold rounded-lg border border-green-500/20 flex items-center gap-1">
-                                                    <i class="fas fa-check text-[10px]"></i>
-                                                    <span x-text="name"></span>
-                                                </span>
-                                                <i class="fas fa-chevron-right text-gray-300 dark:text-gray-600"></i>
+                            <div class="space-y-2">
+                                <h2 class="text-4xl font-black text-rose-500 uppercase tracking-tight italic">{{ __('GAME OVER') }}</h2>
+                                <p class="text-gray-600 dark:text-gray-400 font-medium" x-html="'<strong>' + currentPlayer + '</strong> ' + '{{ __('failed to jump the Schlossgraben!') }}'"></p>
+                            </div>
+
+                            <!-- Jump Sequence Timeline (Multiplayer only) -->
+                            <div x-show="gameMainMode === 'multi'" class="w-full bg-white dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-700/50">
+                                <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold mb-4">{{ __('Jump Sequence') }}</p>
+                                <div class="flex flex-wrap items-center justify-center gap-3 text-sm">
+                                    <template x-for="(name, index) in history" :key="index">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 font-bold rounded-lg border border-green-500/20 flex items-center gap-1">
+                                                <i class="fas fa-check text-[10px]"></i>
+                                                <span x-text="name"></span>
+                                            </span>
+                                            <i class="fas fa-chevron-right text-gray-300 dark:text-gray-600"></i>
+                                        </div>
+                                    </template>
+                                    <span class="px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-black rounded-lg border border-rose-500/20 flex items-center gap-1">
+                                        <i class="fas fa-times text-[10px]"></i>
+                                        <span x-text="currentPlayer"></span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Losers Highlight (Multiplayer only) -->
+                            <div x-show="gameMainMode === 'multi'" class="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl max-w-lg w-full">
+                                <p class="text-xs text-rose-500 dark:text-rose-400 uppercase tracking-widest font-black mb-3">{{ __('THE LOSERS WHO PAY') }}</p>
+                                
+                                <!-- Case 1: Continuous Mode (shows both unless there's no previous player) -->
+                                <div x-show="gameMode === 'continuous'" class="w-full">
+                                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                                        <!-- Loser 1: Current Player -->
+                                        <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm flex-1 w-full">
+                                            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Jumper (Failed)') }}</span>
+                                            <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="currentPlayer"></span>
+                                        </div>
+                                         
+                                        <!-- Plus Sign -->
+                                        <template x-if="previousPlayer">
+                                            <div class="text-2xl font-black text-rose-500">&amp;</div>
+                                        </template>
+             
+                                        <!-- Loser 2: Previous Player -->
+                                        <template x-if="previousPlayer">
+                                            <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm flex-1 w-full">
+                                                <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Handed Over Phone') }}</span>
+                                                <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="previousPlayer"></span>
                                             </div>
                                         </template>
-                                        <span class="px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-black rounded-lg border border-rose-500/20 flex items-center gap-1">
-                                            <i class="fas fa-times text-[10px]"></i>
-                                            <span x-text="currentPlayer"></span>
-                                        </span>
                                     </div>
+                                    <p class="text-[10px] text-gray-500 mt-4 leading-relaxed">
+                                        {{ __('Since the phone must be handed over quickly, the failing player and the previous player who passed it to them are both eliminated!') }}
+                                    </p>
                                 </div>
-
-                                <!-- Losers Highlight -->
-                                <div class="p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl max-w-lg w-full">
-                                    <p class="text-xs text-rose-500 dark:text-rose-400 uppercase tracking-widest font-black mb-3">{{ __('THE LOSERS WHO PAY') }}</p>
-                                    
-                                    <!-- Case 1: Continuous Mode (shows both unless there's no previous player) -->
-                                    <div x-show="gameMode === 'continuous'" class="w-full">
-                                        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                                            <!-- Loser 1: Current Player -->
-                                            <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm flex-1 w-full">
-                                                <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Jumper (Failed)') }}</span>
-                                                <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="currentPlayer"></span>
-                                            </div>
-                                             
-                                            <!-- Plus Sign -->
-                                            <template x-if="previousPlayer">
-                                                <div class="text-2xl font-black text-rose-500">&amp;</div>
-                                            </template>
- 
-                                            <!-- Loser 2: Previous Player -->
-                                            <template x-if="previousPlayer">
-                                                <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm flex-1 w-full">
-                                                    <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Handed Over Phone') }}</span>
-                                                    <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="previousPlayer"></span>
-                                                </div>
-                                            </template>
+                                 
+                                <!-- Case 2: Calm Mode (only current player is eliminated) -->
+                                <div x-show="gameMode === 'calm'" class="w-full">
+                                    <div class="flex items-center justify-center">
+                                        <!-- Loser 1: Current Player -->
+                                        <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm max-w-xs w-full">
+                                            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Jumper (Failed)') }}</span>
+                                            <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="currentPlayer"></span>
                                         </div>
-                                        <p class="text-[10px] text-gray-500 mt-4 leading-relaxed">
-                                            {{ __('Since the phone must be handed over quickly, the failing player and the previous player who passed it to them are both eliminated!') }}
-                                        </p>
                                     </div>
-                                     
-                                    <!-- Case 2: Calm Mode (only current player is eliminated) -->
-                                    <div x-show="gameMode === 'calm'" class="w-full">
-                                        <div class="flex items-center justify-center">
-                                            <!-- Loser 1: Current Player -->
-                                            <div class="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-xl border border-rose-500/20 shadow-sm max-w-xs w-full">
-                                                <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{{ __('Jumper (Failed)') }}</span>
-                                                <span class="text-xl font-black text-rose-500 uppercase mt-1" x-text="currentPlayer"></span>
-                                            </div>
-                                        </div>
-                                        <p class="text-[10px] text-gray-500 mt-4 leading-relaxed">
-                                            {{ __('In Calm Mode, only the player who failed to jump is eliminated.') }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-                                    <button @click="saveLosers()" :disabled="saving" class="flex-1 py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-black text-lg rounded-2xl shadow-lg shadow-rose-500/25 transition-all active:scale-95 uppercase tracking-tighter">
-                                        <span x-show="!saving">{{ __('Save Losers ➔') }}</span>
-                                        <span x-show="saving"><i class="fas fa-spinner animate-spin mr-2"></i>{{ __('Saving...') }}</span>
-                                    </button>
-                                    <button @click="resetGame()" class="flex-1 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-extrabold text-lg rounded-2xl transition-all active:scale-95 uppercase tracking-tight">
-                                        {{ __('Play Again') }}
-                                    </button>
+                                    <p class="text-[10px] text-gray-500 mt-4 leading-relaxed">
+                                        {{ __('In Calm Mode, only the player who failed to jump is eliminated.') }}
+                                    </p>
                                 </div>
                             </div>
 
-                        </div>
-                    </template>
-                </div>
+                            <!-- Single Player Score Submission Form -->
+                            <div x-show="gameMainMode === 'single'" class="p-6 bg-purple-500/10 border border-purple-500/20 rounded-2xl max-w-lg w-full space-y-4">
+                                <p class="text-xs text-purple-500 dark:text-purple-400 uppercase tracking-widest font-black">{{ __('Your Score:') }} <span class="text-2xl ml-1 text-purple-600 dark:text-purple-400 font-extrabold" x-text="history.length"></span></p>
+                                
+                                <div x-show="!singlePlayerSubmitted" class="flex flex-col sm:flex-row gap-2 items-center w-full">
+                                    <input type="text" x-model="singlePlayerName" class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-250 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm dark:text-white" placeholder="{{ __('Enter your name') }}">
+                                    <button @click="submitSinglePlayerScore()" :disabled="saving || !singlePlayerName.trim()" class="w-full sm:w-auto px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold rounded-xl transition-all shadow-md shadow-purple-500/25 whitespace-nowrap text-sm uppercase tracking-wider flex items-center justify-center">
+                                        <span x-show="!saving">{{ __('Submit Score') }}</span>
+                                        <span x-show="saving"><i class="fas fa-spinner animate-spin mr-2"></i>{{ __('Saving...') }}</span>
+                                    </button>
+                                </div>
+                                <div x-show="singlePlayerSubmitted" class="text-green-500 font-bold text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>{{ __('Score submitted successfully!') }}</span>
+                                </div>
+                            </div>
 
+                            <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+                                <button x-show="gameMainMode === 'multi'" @click="saveLosers()" :disabled="saving" class="flex-1 py-4 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-black text-lg rounded-2xl shadow-lg shadow-rose-500/25 transition-all active:scale-95 uppercase tracking-tighter">
+                                    <span x-show="!saving">{{ __('Save Losers ➔') }}</span>
+                                    <span x-show="saving"><i class="fas fa-spinner animate-spin mr-2"></i>{{ __('Saving...') }}</span>
+                                </button>
+                                <button @click="resetGame()" class="flex-1 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-extrabold text-lg rounded-2xl transition-all active:scale-95 uppercase tracking-tight">
+                                    {{ __('Play Again') }}
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -465,6 +548,10 @@
                 gameTime: 0,
                 
                 // Game Mode state
+                gameMainMode: '{{ count($names) >= 3 ? 'multi' : 'single' }}',
+                singlePlayerName: '{{ count($names) > 0 ? addslashes($names[0]) : addslashes(__('Knight')) }}',
+                singlePlayerSubmitted: false,
+                leaderboard: @json($leaderboard),
                 gameMode: 'continuous', // 'continuous' or 'calm'
                 handoverProgress: 100,
                 handoverInterval: null,
@@ -500,8 +587,12 @@
 
                 init() {
                     this.preloadBackgrounds();
-                    if (this.players.length >= 3) {
-                        this.initializeRotation();
+                    if (this.gameMainMode === 'multi') {
+                        if (this.players.length >= 3) {
+                            this.initializeRotation();
+                        }
+                    } else {
+                        this.currentPlayer = this.singlePlayerName || 'Knight';
                     }
                 },
 
@@ -544,14 +635,56 @@
                         this.handoverInterval = null;
                     }
                     this.history = [];
-                    this.currentPlayer = '';
-                    this.previousPlayer = '';
-                    this.nextPlayer = '';
                     this.gameState = 'ready';
                     this.saving = false;
-                    if (this.players.length >= 3) {
-                        this.initializeRotation();
+                    this.singlePlayerSubmitted = false;
+                    if (this.gameMainMode === 'multi') {
+                        if (this.players.length >= 3) {
+                            this.initializeRotation();
+                        } else {
+                            this.currentPlayer = '';
+                            this.previousPlayer = '';
+                            this.nextPlayer = '';
+                        }
+                    } else {
+                        this.currentPlayer = this.singlePlayerName || 'Knight';
+                        this.previousPlayer = '';
+                        this.nextPlayer = '';
                     }
+                },
+
+                setMainMode(mode) {
+                    this.gameMainMode = mode;
+                    this.resetGame();
+                },
+
+                submitSinglePlayerScore() {
+                    if (!this.singlePlayerName.trim()) return;
+                    this.saving = true;
+                    fetch('/tools/schlossgraben-jump/save-score', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            player_name: this.singlePlayerName,
+                            score: this.history.length
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.singlePlayerSubmitted = true;
+                            this.leaderboard = data.leaderboard;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error submitting score:', err);
+                    })
+                    .finally(() => {
+                        this.saving = false;
+                    });
                 },
 
                 startCountdown() {
@@ -594,7 +727,7 @@
                     
                     if (layoutType === 0) {
                         // Layout 0: Classic Moat (single gap)
-                        const leftEnd = 400;
+                        const leftEnd = 550; // Widen starting platform (was 400)
                         // Gap size scales up to 260px
                         const gapSize = Math.min(130 + turns * 15, 260);
                         const rightStart = leftEnd + gapSize;
@@ -618,7 +751,7 @@
                         
                     } else if (layoutType === 1) {
                         // Layout 1: Twin Bridges (Double gap with intermediate flat island)
-                        const startWidth = 320;
+                        const startWidth = 470; // Widen starting platform (was 320)
                         // Gaps scale up to 160px
                         const gap1 = Math.min(100 + turns * 10, 160);
                         const gap2 = Math.min(100 + turns * 10, 160);
@@ -639,7 +772,7 @@
                         
                     } else if (layoutType === 2) {
                         // Layout 2: Stepping Stones (Three gaps, two small stone platforms)
-                        const startWidth = 280;
+                        const startWidth = 430; // Widen starting platform (was 280)
                         const gap = Math.min(95 + turns * 6, 140);
                         const stoneWidth = Math.max(60 - turns * 3, 40);
                         
@@ -659,7 +792,7 @@
                         
                     } else if (layoutType === 3) {
                         // Layout 3: Crate Climb (Ascending and descending crate steps)
-                        const startWidth = 320;
+                        const startWidth = 470; // Widen starting platform (was 320)
                         const gap1 = Math.min(90 + turns * 8, 140);
                         const gap2 = Math.min(90 + turns * 8, 140);
                         const gap3 = Math.min(90 + turns * 8, 140);
@@ -759,8 +892,8 @@
                         }
                     });
                     
-                    // Handover duration shrinks by 0.3s per round, minimum 0.8s (800ms)
-                    const duration = Math.max(3000 - this.history.length * 300, 800);
+                    // Handover duration shrinks by 0.15s per round, minimum 0.6s (600ms)
+                    const duration = Math.max(1800 - this.history.length * 150, 600);
                     let elapsed = 0;
                     this.handoverProgress = 100;
                     
@@ -899,11 +1032,15 @@
                     
                     setTimeout(() => {
                         if (this.gameState === 'success') {
-                            this.rotatePlayers();
-                            if (this.gameMode === 'continuous') {
-                                this.startHandoverCountdown();
+                            if (this.gameMainMode === 'single') {
+                                this.startCountdown();
                             } else {
-                                this.gameState = 'ready';
+                                this.rotatePlayers();
+                                if (this.gameMode === 'continuous') {
+                                    this.startHandoverCountdown();
+                                } else {
+                                    this.gameState = 'ready';
+                                }
                             }
                         }
                     }, waitTime);
