@@ -45,6 +45,13 @@ class GameController extends Controller
                 'color' => 'emerald'
             ],
             [
+                'name' => __('Schlossgraben Jump'),
+                'description' => __('Jump over the Schlossgraben! Pass the phone to the next player. Failing eliminates you and the previous player.'),
+                'route' => 'tools.schlossgraben-jump',
+                'icon' => 'fas fa-running',
+                'color' => 'purple'
+            ],
+            [
                 'name' => __('Player Management'),
                 'description' => __('Manage the list of players for games.'),
                 'route' => 'tools.player-selection',

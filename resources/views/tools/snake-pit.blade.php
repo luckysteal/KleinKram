@@ -228,7 +228,7 @@
                     if (existingLi) {
                         let countSpan = existingLi.querySelector('.win-count');
                         let currentWins = parseInt(countSpan.innerText);
-                        countSpan.innerText = (currentWins + 1) + ' WINS';
+                        countSpan.innerText = (currentWins + 1) + ' {{ __('FAILS') }}';
                     } else {
                         let li = document.createElement('li');
                         li.className = 'flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-gray-100 dark:border-gray-600 group hover:border-amber-400 transition-all duration-300 hover:shadow-md';
@@ -241,7 +241,7 @@
                                 </span>
                                 <span class="text-gray-800 dark:text-gray-100 font-extrabold text-lg">${winner}</span>
                             </div>
-                            <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">1 WINS</span>`;
+                            <span class="bg-amber-500 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform win-count">1 {{ __('FAILS') }}</span>`;
                         list.appendChild(li);
                     }
                     

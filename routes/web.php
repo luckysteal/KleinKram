@@ -45,6 +45,7 @@ Route::get('/tools/hi-low', [ToolController::class, 'hiLow'])->name('tools.hi-lo
 Route::get('/tools/ticking-bomb', [ToolController::class, 'tickingBomb'])->name('tools.ticking-bomb');
 Route::get('/tools/russian-roulette', [ToolController::class, 'russianRoulette'])->name('tools.russian-roulette');
 Route::get('/tools/snake-pit', [ToolController::class, 'snakePit'])->name('tools.snake-pit');
+Route::get('/tools/schlossgraben-jump', [ToolController::class, 'schlossgrabenJump'])->name('tools.schlossgraben-jump');
 
 Route::get('/secret-playground/verb-game', [VerbGameController::class, 'index'])->name('games.verb-game');
 Route::post('/secret-playground/verb-game/save', [VerbGameController::class, 'save'])->name('games.verb-game.save');
