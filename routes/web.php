@@ -52,6 +52,7 @@ Route::post('/secret-playground/verb-game/save', [VerbGameController::class, 'sa
 
 Route::post('/tools/players/update', [ToolController::class, 'updatePlayers'])->name('tools.players.update');
 Route::post('/tools/save-winner', [ToolController::class, 'saveWinner'])->name('tools.save-winner');
+Route::post('/tools/schlossgraben-jump/save-score', [ToolController::class, 'saveSchlossgrabenScore'])->name('tools.schlossgraben-jump.save-score');
 Route::post('/tools/toggle-lms', [ToolController::class, 'toggleLms'])->name('tools.toggle-lms');
 Route::post('/tools/reset-lms', [ToolController::class, 'resetLms'])->name('tools.reset-lms');
 Route::post('/tools/toggle-shuffle', [ToolController::class, 'toggleShuffle'])->name('tools.toggle-shuffle');

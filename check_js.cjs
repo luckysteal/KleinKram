@@ -12,7 +12,7 @@ let jsCode = scriptMatch[1];
 
 // Replace PHP Blade syntax like @json($names) with dummy JS so that it parses
 jsCode = jsCode.replace(/@json\([^)]*\)/g, '[]');
-jsCode = jsCode.replace(/\{\{\s*csrf_token\(\)\s*\}\}/g, '"dummy_token"');
+jsCode = jsCode.replace(/\{\{[\s\S]*?\}\}/g, '"dummy_value"');
 
 // Save the jsCode to a temporary file
 fs.writeFileSync('temp_check.cjs', jsCode);

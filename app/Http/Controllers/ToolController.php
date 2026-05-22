@@ -55,7 +55,10 @@ class ToolController extends Controller
 
     public function schlossgrabenJump()
     {
-        return view('tools.schlossgraben-jump', $this->getGameData());
+        $leaderboard = \App\Models\SchlossgrabenJumpScore::orderBy('score', 'desc')->limit(10)->get();
+        return view('tools.schlossgraben-jump', array_merge($this->getGameData(), [
+            'leaderboard' => $leaderboard
+        ]));
     }
 
     private function getGameData()
@@ -217,5 +220,25 @@ class ToolController extends Controller
         $active = (bool)$request->input('active', false);
         Session::put('shuffle_active', $active);
         return response()->json(['success' => true, 'shuffle_active' => $active]);
+    }
+
+    public function saveSchlossgrabenScore(Request $request)
+    {
+        $request->validate([
+            'player_name' => 'required|string|max:255',
+            'score' => 'required|integer|min:0',
+        ]);
+
+        \App\Models\SchlossgrabenJumpScore::create([
+            'player_name' => $request->input('player_name'),
+            'score' => $request->input('score'),
+        ]);
+
+        $leaderboard = \App\Models\SchlossgrabenJumpScore::orderBy('score', 'desc')->limit(10)->get();
+
+        return response()->json([
+            'success' => true,
+            'leaderboard' => $leaderboard
+        ]);
     }
 }
