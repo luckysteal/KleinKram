@@ -6,6 +6,10 @@
     openEditModal: false, 
     openPrintModal: false,
     openZoomModal: false,
+    addArtikelNr: '',
+    addArtikelNrLoading: false,
+    addArtikelNrError: '',
+    editArtikelNrError: '',
     selectedItem: {
         id: '',
         bezeichnung: '',
@@ -57,6 +61,28 @@
         document.getElementById('kommentar').value = item.kommentar || '';
         this.tplQuery = '';
         this.tplResults = [];
+    },
+    async fetchNewArtikelNr() {
+        this.addArtikelNrLoading = true;
+        this.addArtikelNrError = '';
+        try {
+            const res = await fetch('{{ route('sck.lager.generate-number') }}');
+            const data = await res.json();
+            this.addArtikelNr = data.number;
+        } catch (e) {
+            this.addArtikelNrError = 'Fehler beim Generieren.';
+        }
+        this.addArtikelNrLoading = false;
+    },
+    async rerollEditArtikelNr() {
+        this.editArtikelNrError = '';
+        try {
+            const res = await fetch('{{ route('sck.lager.generate-number') }}');
+            const data = await res.json();
+            this.selectedItem.neue_artikelnummer = data.number;
+        } catch (e) {
+            this.editArtikelNrError = 'Fehler beim Generieren.';
+        }
     }
 }">
 
@@ -82,7 +108,7 @@
             </a>
 
             <!-- Add new item button -->
-            <button @click="openAddModal = true" class="btn-neon-cyan text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center space-x-2 transition-all duration-200 has-tooltip">
+            <button @click="openAddModal = true; fetchNewArtikelNr()" class="btn-neon-cyan text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center space-x-2 transition-all duration-200 has-tooltip">
                 <i class="fa-solid fa-circle-plus"></i>
                 <span>Neuer Artikel</span>
                 <div class="tooltip-item">Fügt einen neuen Artikel im Lagersystem hinzu. Die 5-stellige Artikelnummer wird automatisch generiert.</div>
@@ -425,6 +451,38 @@
                         <input type="text" name="alte_artikelnummer" id="alte_artikelnummer" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
 
+                    <!-- Neue Artikelnummer field -->
+                    <div class="flex flex-col space-y-1 sm:col-span-2">
+                        <label for="add_neue_artikelnummer" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1">
+                            <span>Neue Artikelnummer</span>
+                            <span class="ml-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">5-stellig</span>
+                        </label>
+                        <!-- Warning Banner -->
+                        <div class="sck-artNr-warning">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>
+                                <strong>Wichtig:</strong> Die Artikelnummer ist dauerhaft mit dem QR-Code verknüpft. Nach dem Anlegen sollte sie <strong>nicht mehr geändert werden</strong>, da sonst alle gedruckten Etiketten ungültig werden.
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <input type="text" name="neue_artikelnummer" id="add_neue_artikelnummer"
+                                   x-model="addArtikelNr"
+                                   maxlength="5" minlength="5" pattern="[0-9]{5}"
+                                   required
+                                   placeholder="z. B. 48291"
+                                   class="sck-input text-sm rounded-lg px-3 py-2 font-mono font-bold flex-grow">
+                            <button type="button" @click="fetchNewArtikelNr()"
+                                    :disabled="addArtikelNrLoading"
+                                    class="sck-reroll-btn"
+                                    title="Neue zufällige Nummer generieren">
+                                <i class="fa-solid fa-dice" :class="addArtikelNrLoading ? 'animate-spin' : ''"></i>
+                                <span x-show="!addArtikelNrLoading">Neu würfeln</span>
+                                <span x-show="addArtikelNrLoading" x-cloak>...</span>
+                            </button>
+                        </div>
+                        <p x-show="addArtikelNrError" x-text="addArtikelNrError" class="text-red-400 text-xs mt-1" x-cloak></p>
+                    </div>
+
                     <div class="flex flex-col space-y-1">
                         <label for="stueckzahl" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
                             <span>Anfangsbestand *</span>
@@ -504,6 +562,35 @@
                         <input type="text" name="alte_artikelnummer" id="edit_alte_artikelnummer" x-model="selectedItem.alte_artikelnummer" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
 
+                    <!-- Neue Artikelnummer field (editable) -->
+                    <div class="flex flex-col space-y-1 sm:col-span-2">
+                        <label for="edit_neue_artikelnummer" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1">
+                            <span>Neue Artikelnummer</span>
+                            <span class="ml-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">5-stellig</span>
+                        </label>
+                        <!-- Warning Banner -->
+                        <div class="sck-artNr-warning">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>
+                                <strong>Achtung:</strong> Das Ändern der Artikelnummer macht alle bestehenden QR-Etiketten ungültig. Nur ändern, wenn wirklich nötig und alle Etiketten neu gedruckt werden.
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <input type="text" name="neue_artikelnummer" id="edit_neue_artikelnummer"
+                                   x-model="selectedItem.neue_artikelnummer"
+                                   maxlength="5" minlength="5" pattern="[0-9]{5}"
+                                   required
+                                   class="sck-input text-sm rounded-lg px-3 py-2 font-mono font-bold flex-grow">
+                            <button type="button" @click="rerollEditArtikelNr()"
+                                    class="sck-reroll-btn"
+                                    title="Neue zufällige Nummer generieren">
+                                <i class="fa-solid fa-dice"></i>
+                                <span>Neu würfeln</span>
+                            </button>
+                        </div>
+                        <p x-show="editArtikelNrError" x-text="editArtikelNrError" class="text-red-400 text-xs mt-1" x-cloak></p>
+                    </div>
+
                     <div class="flex flex-col space-y-1">
                         <label for="edit_stueckzahl" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Bestand *</label>
                         <input type="number" name="stueckzahl" id="edit_stueckzahl" x-model="selectedItem.stueckzahl" min="0" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
@@ -528,7 +615,7 @@
     </div>
 
     <!-- Label Print Modal Overlay -->
-    <div x-show="openPrintModal" @keydown.escape.window="openPrintModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75" x-cloak x-init="$watch('printSize', () => renderPrintQR())">
+    <div x-show="openPrintModal" @keydown.escape.window="openPrintModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75" x-cloak x-init="$watch('printSize', () => renderPrintQR()); $watch('openPrintModal', val => { if (val) $nextTick(() => renderPrintQR()); })">
         <div @click.away="openPrintModal = false" class="glass-panel max-w-2xl w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
                 <h3 class="text-lg font-black flex items-center space-x-2">
@@ -762,11 +849,48 @@
 
             // Right-Click Context Menu Logic
             const contextMenu = document.getElementById('custom-context-menu');
-            
+
+            function positionContextMenu(clientX, clientY) {
+                // Temporarily show off-screen to measure
+                contextMenu.style.visibility = 'hidden';
+                contextMenu.style.left = '0px';
+                contextMenu.style.top  = '0px';
+                contextMenu.classList.remove('hidden');
+
+                const menuW = contextMenu.offsetWidth;
+                const menuH = contextMenu.offsetHeight;
+
+                contextMenu.classList.add('hidden');
+                contextMenu.style.visibility = '';
+
+                const viewW = window.innerWidth;
+                const viewH = window.innerHeight;
+
+                // Flip horizontally if overflows right
+                let left = clientX + window.scrollX;
+                if (clientX + menuW + 12 > viewW) {
+                    left = clientX - menuW + window.scrollX;
+                }
+                // Clamp left
+                left = Math.max(8 + window.scrollX, left);
+
+                // Flip vertically if overflows bottom
+                let top = clientY + window.scrollY;
+                if (clientY + menuH + 12 > viewH) {
+                    top = clientY - menuH + window.scrollY;
+                }
+                // Clamp top
+                top = Math.max(8 + window.scrollY, top);
+
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top  = `${top}px`;
+                contextMenu.classList.remove('hidden');
+            }
+
             document.querySelectorAll('.cursor-context-menu').forEach(row => {
                 row.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
-                    
+
                     const id = row.dataset.id;
                     const bezeichnung = row.dataset.bezeichnung;
                     const geraet = row.dataset.geraet;
@@ -777,7 +901,7 @@
                     const neueNr = row.dataset.neueNr;
                     const stueckzahl = parseInt(row.dataset.stueckzahl);
                     const kommentar = row.dataset.kommentar;
-                    
+
                     const alpineData = Alpine.$data(document.querySelector('[x-data]'));
                     alpineData.selectedItem = {
                         id, bezeichnung, geraet, lieferant,
@@ -785,24 +909,23 @@
                         alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
                         stueckzahl, kommentar
                     };
-                    
-                    contextMenu.style.left = `${e.clientX}px`;
-                    contextMenu.style.top = `${e.clientY}px`;
-                    contextMenu.classList.remove('hidden');
+
+                    positionContextMenu(e.clientX, e.clientY);
                 });
             });
-            
+
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('#custom-context-menu')) {
                     contextMenu.classList.add('hidden');
                 }
             });
-            
+
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     contextMenu.classList.add('hidden');
                 }
             });
+
 
             // Client-Side Instant Filtering
             const searchInput = document.querySelector('input[name="search"]');
@@ -878,30 +1001,155 @@
             };
 
             window.printLabel = function(neueNr, size) {
-                const printSection = document.getElementById('print-section');
-                printSection.innerHTML = document.getElementById('print-preview-container').outerHTML;
-                printSection.classList.remove('hidden');
-                
-                const printCanvas = printSection.querySelector('#print-label-qr');
-                if (printCanvas) {
-                    const qrSize = size === 'small' ? 80 : 120;
-                    const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
-                    new QRious({
-                        element: printCanvas,
-                        value: targetUrl,
-                        size: qrSize,
-                        background: '#ffffff',
-                        foreground: '#000000',
-                        level: 'H'
-                    });
+                // Gather Alpine state
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const item = alpineData.selectedItem;
+                const fields = alpineData.printFields;
+
+                // Label dimensions (matching CSS preview sizes)
+                const labelW = size === 'small' ? 320 : 480;
+                const labelH = size === 'small' ? 180 : 300;
+                const qrSize = size === 'small' ? 80 : 120;
+                const padding = size === 'small' ? 14 : 22;
+
+                // Generate QR code as data URL via a temp canvas
+                const tmpCanvas = document.createElement('canvas');
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                new QRious({
+                    element: tmpCanvas,
+                    value: targetUrl,
+                    size: qrSize,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                    level: 'H'
+                });
+                const qrDataUrl = tmpCanvas.toDataURL('image/png');
+
+                // Build field rows HTML
+                let fieldsHtml = '';
+                if (fields.geraet && item.geraet)      fieldsHtml += `<div class="field-row"><b>Kat:</b> ${esc(item.geraet)}</div>`;
+                if (fields.lieferant && item.lieferant) fieldsHtml += `<div class="field-row"><b>Lief:</b> ${esc(item.lieferant)}</div>`;
+                if (fields.ek && item.ek_ohne_st)       fieldsHtml += `<div class="field-row"><b>EK:</b> ${esc(item.ek_ohne_st)} €</div>`;
+                if (fields.vk && item.vk_ohne_st)       fieldsHtml += `<div class="field-row"><b>VK:</b> ${esc(item.vk_ohne_st)} €</div>`;
+                if (fields.alte_nr && item.alte_artikelnummer) fieldsHtml += `<div class="field-row"><b>Alt:</b> ${esc(item.alte_artikelnummer)}</div>`;
+                if (fields.neue_nr)                     fieldsHtml += `<div class="field-row"><b>Neu:</b> ${esc(item.neue_artikelnummer)}</div>`;
+                let kommentarHtml = '';
+                if (fields.kommentar && item.kommentar) {
+                    kommentarHtml = `<div style="border-top:1px solid #ccc;padding-top:4px;margin-top:4px;font-size:8px;color:#555;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(item.kommentar)}</div>`;
                 }
-                
-                window.print();
-                
-                setTimeout(() => {
-                    printSection.innerHTML = '';
-                    printSection.classList.add('hidden');
-                }, 1000);
+
+                const titleFontSize = size === 'small' ? '13px' : '18px';
+                const fieldFontSize = size === 'small' ? '9px'  : '11px';
+
+                const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Label: ${esc(item.bezeichnung)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page {
+    size: ${labelW}px ${labelH}px;
+    margin: 0;
+  }
+  body {
+    width: ${labelW}px;
+    height: ${labelH}px;
+    font-family: 'Figtree', Arial, sans-serif;
+    background: white;
+    color: black;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .label {
+    width: ${labelW}px;
+    height: ${labelH}px;
+    padding: ${padding}px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow: hidden;
+  }
+  .qr-wrap {
+    flex-shrink: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-wrap img {
+    display: block;
+    width: ${qrSize}px;
+    height: ${qrSize}px;
+  }
+  .info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .title {
+    font-size: ${titleFontSize};
+    font-weight: 900;
+    line-height: 1.2;
+    color: #000;
+    word-break: break-word;
+  }
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    margin-top: 5px;
+  }
+  .field-row {
+    font-size: ${fieldFontSize};
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .field-row b {
+    font-weight: 700;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+<div class="label">
+  <div class="qr-wrap">
+    <img src="${qrDataUrl}" alt="QR Code">
+  </div>
+  <div class="info">
+    <div>
+      <div class="title">${esc(item.bezeichnung)}</div>
+      <div class="fields">${fieldsHtml}</div>
+    </div>
+    ${kommentarHtml}
+  </div>
+</div>
+<script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };<\/script>
+</body>
+</html>`;
+
+                function esc(str) {
+                    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                }
+
+                const win = window.open('', '_blank', `width=${labelW + 40},height=${labelH + 120},menubar=no,toolbar=no,status=no`);
+                if (win) {
+                    win.document.write(html);
+                    win.document.close();
+                } else {
+                    alert('Bitte erlauben Sie Pop-ups für diese Seite, um den Druckdialog zu öffnen.');
+                }
             };
         });
     </script>

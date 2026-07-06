@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" class="dark">
+<html lang="de" id="sck-html">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,14 @@
 
     <!-- Compiled Assets (Strictly isolated sck bundle) -->
     @vite(['resources/css/sck.css', 'resources/js/sck.js'])
+
+    <!-- Apply saved theme immediately to prevent flash -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('sck-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 <body class="sck-theme min-h-screen flex flex-col antialiased">
 
@@ -35,13 +43,25 @@
             </div>
 
             <!-- Header Actions -->
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3">
                 <!-- User name with tooltip -->
                 <div class="hidden sm:flex items-center space-x-2 bg-gray-900/60 px-3 py-1.5 rounded-full border border-gray-800 has-tooltip cursor-default">
                     <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse"></span>
-                    <span class="text-sm font-semibold text-gray-300">Andreas</span>
-                    <div class="tooltip-item tooltip-left">Angemeldet als Andreas. Typ: SCK</div>
+                    <span class="text-sm font-semibold text-gray-300">{{ auth()->user()->name }}</span>
+                    <div class="tooltip-item tooltip-left">Angemeldet als {{ auth()->user()->name }}. Typ: {{ auth()->user()->is_admin ? 'Admin' : (auth()->user()->role ?? 'Benutzer') }}</div>
                 </div>
+
+                <!-- Dark / Light Mode Toggle -->
+                <button id="theme-toggle"
+                        class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-cyan-400 bg-gray-900/40 hover:bg-cyan-500/10 border border-gray-800 hover:border-cyan-500/30 transition-all duration-200 has-tooltip"
+                        aria-label="Theme wechseln"
+                        onclick="toggleSckTheme()">
+                    <!-- Moon icon (shown in dark mode) -->
+                    <i id="theme-icon-dark"  class="fa-solid fa-moon text-sm"></i>
+                    <!-- Sun icon (shown in light mode) -->
+                    <i id="theme-icon-light" class="fa-solid fa-sun  text-sm hidden"></i>
+                    <div class="tooltip-item tooltip-left">Hell-/Dunkel-Modus umschalten</div>
+                </button>
 
                 <!-- Back to Main App Button -->
                 <a href="{{ route('dashboard') }}" class="hidden sm:inline-flex items-center space-x-1.5 text-xs text-gray-400 hover:text-cyan-400 bg-gray-900/40 hover:bg-cyan-500/10 px-3 py-2 rounded-lg border border-gray-800 hover:border-cyan-500/30 transition-all duration-200 has-tooltip">
@@ -122,6 +142,37 @@
         </button>
     <!-- Global Print Section -->
     <div id="print-section" class="hidden"></div>
+
+    <!-- Theme Toggle Script -->
+    <script>
+        function syncThemeIcons(theme) {
+            var iconDark  = document.getElementById('theme-icon-dark');
+            var iconLight = document.getElementById('theme-icon-light');
+            if (!iconDark || !iconLight) return;
+            if (theme === 'light') {
+                iconDark.classList.add('hidden');
+                iconLight.classList.remove('hidden');
+            } else {
+                iconDark.classList.remove('hidden');
+                iconLight.classList.add('hidden');
+            }
+        }
+
+        function toggleSckTheme() {
+            var html  = document.documentElement;
+            var current = html.getAttribute('data-theme') || 'dark';
+            var next    = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('sck-theme', next);
+            syncThemeIcons(next);
+        }
+
+        // Sync icons on DOMContentLoaded (theme is already applied inline above)
+        document.addEventListener('DOMContentLoaded', function() {
+            var theme = localStorage.getItem('sck-theme') || 'dark';
+            syncThemeIcons(theme);
+        });
+    </script>
 
 </body>
 </html>

@@ -26,7 +26,7 @@
                     <span class="text-xxs font-bold text-cyan-400 uppercase tracking-widest bg-cyan-950/80 px-2.5 py-1 rounded-full border border-cyan-800/40">
                         {{ $item->geraet }}
                     </span>
-                    <h2 class="text-2xl font-black text-white mt-2">{{ $item->bezeichnung }}</h2>
+                    <h2 class="text-2xl font-black mt-2" style="color: var(--sck-body-color)">{{ $item->bezeichnung }}</h2>
                 </div>
                 <div class="flex flex-col items-center space-y-2 flex-shrink-0">
                     <div class="bg-gray-900 p-2 rounded-xl border border-gray-800 text-center font-mono w-24">
@@ -52,7 +52,7 @@
                         <i class="fa-solid fa-circle-question text-cyan-400 text-xxs"></i>
                         <div class="tooltip-item tooltip-left">Zeigt die im Lager erfassten Einheiten. Ändert sich nach Ein- oder Ausbuchungen.</div>
                     </span>
-                    <div class="text-2xl font-black font-mono mt-1" :class="{{ $item->stueckzahl }} < 5 ? 'text-amber-400' : 'text-gray-100'">
+                    <div class="text-2xl font-black font-mono mt-1" :class="{{ $item->stueckzahl }} < 5 ? 'text-amber-400' : ''" style="color: {{ $item->stueckzahl < 5 ? '' : 'var(--sck-body-color)' }}">
                         {{ $item->stueckzahl }} Stk.
                     </div>
                 </div>

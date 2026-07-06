@@ -29,6 +29,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = auth()->user();
+        if ($user && $user->role === 'SCK') {
+            return redirect()->route('sck.dashboard');
+        }
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

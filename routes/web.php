@@ -62,6 +62,9 @@ Route::post('/fragebogen/save', [FragebogenController::class, 'store'])->name('f
 Route::get('/fragebogen/result/{id}', [FragebogenController::class, 'show'])->name('fragebogen.show');
 
 Route::get('/dashboard', function () {
+    if (auth()->user() && auth()->user()->role === 'SCK') {
+        return redirect()->route('sck.dashboard');
+    }
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
