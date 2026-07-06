@@ -21,6 +21,10 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
+                $user = Auth::guard($guard)->user();
+                if ($user && $user->role === 'SCK') {
+                    return redirect()->route('sck.dashboard');
+                }
                 return redirect(RouteServiceProvider::HOME);
             }
         }

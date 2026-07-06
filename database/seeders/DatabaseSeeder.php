@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             PageSeeder::class,
             BarSeeder::class,
             DrinkSeeder::class,
+            SckSeeder::class,
         ]);
     }
 }

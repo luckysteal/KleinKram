@@ -1,0 +1,564 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom variables, layouts, animations, and tooltips for the SCK App */
+:root {
+    --bg-dark-900: #0a0e17;
+    --bg-dark-800: #111827;
+    --bg-dark-700: #1f2937;
+    --neon-cyan: #06b6d4;
+    --neon-purple: #8b5cf6;
+    --text-glow: 0 0 10px rgba(6, 182, 212, 0.4);
+    --glass-bg: rgba(17, 24, 39, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.05);
+
+    /* Semantic theme tokens — dark defaults */
+    --sck-body-bg:        #0a0e17;
+    --sck-body-color:     #f3f4f6;
+    --sck-input-bg:       rgba(17, 24, 39, 0.8);
+    --sck-input-border:   rgba(255, 255, 255, 0.1);
+    --sck-input-color:    #f3f4f6;
+    --sck-ctx-bg:         rgba(10, 14, 23, 0.95);
+    --sck-ctx-border:     rgba(6, 182, 212, 0.3);
+    --sck-ctx-color:      #d1d5db;
+    --sck-ctx-hover-bg:   rgba(6, 182, 212, 0.15);
+    --sck-ctx-hover-color:#06b6d4;
+    --sck-ctx-divider:    rgba(255, 255, 255, 0.08);
+    --sck-tooltip-bg:     #1f2937;
+    --sck-tooltip-color:  #f9fafb;
+}
+
+/* ─── Light Theme ─────────────────────────────────────────────── */
+html[data-theme="light"] {
+    --glass-bg:    rgba(255, 255, 255, 0.88);
+    --glass-border: rgba(30, 41, 59, 0.1);
+
+    --sck-body-bg:        #eef2f7;
+    --sck-body-color:     #1e293b;
+    --sck-input-bg:       rgba(241, 245, 249, 0.95);
+    --sck-input-border:   rgba(30, 41, 59, 0.22);
+    --sck-input-color:    #1e293b;
+    --sck-ctx-bg:         rgba(255, 255, 255, 0.98);
+    --sck-ctx-border:     rgba(6, 182, 212, 0.35);
+    --sck-ctx-color:      #334155;
+    --sck-ctx-hover-bg:   rgba(6, 182, 212, 0.1);
+    --sck-ctx-hover-color:#0891b2;
+    --sck-ctx-divider:    rgba(0, 0, 0, 0.07);
+    --sck-tooltip-bg:     #1e293b;
+    --sck-tooltip-color:  #f8fafc;
+}
+
+/* Light mode body + transitions */
+html[data-theme="light"] body.sck-theme {
+    background-color: var(--sck-body-bg);
+    color: var(--sck-body-color);
+}
+
+/* Smooth theme transitions on key elements */
+body.sck-theme,
+.glass-panel,
+.sck-input,
+header,
+footer,
+.context-menu {
+    transition: background-color 0.25s ease, color 0.2s ease,
+                border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+body.sck-theme {
+    background-color: var(--sck-body-bg);
+    color: var(--sck-body-color);
+    font-family: 'Figtree', sans-serif;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Glassmorphism panels */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+}
+
+.glass-panel-hover:hover {
+    background: rgba(17, 24, 39, 0.85);
+    border-color: rgba(6, 182, 212, 0.25);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="light"] .glass-panel-hover:hover {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(6, 182, 212, 0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Light mode Tailwind overrides ─────────────────────────────── */
+html[data-theme="light"] .text-gray-200  { color: #1e293b !important; }
+html[data-theme="light"] .text-gray-300  { color: #334155 !important; }
+html[data-theme="light"] .text-gray-400  { color: #475569 !important; }
+html[data-theme="light"] .text-gray-500  { color: #64748b !important; }
+html[data-theme="light"] .text-gray-600  { color: #475569 !important; }
+
+html[data-theme="light"] .border-gray-800  { border-color: rgba(30,41,59,0.15) !important; }
+html[data-theme="light"] .border-gray-850  { border-color: rgba(30,41,59,0.1) !important; }
+
+html[data-theme="light"] .bg-gray-800   { background-color: #e2e8f0 !important; }
+html[data-theme="light"] .bg-gray-900   { background-color: #f1f5f9 !important; }
+html[data-theme="light"] .bg-gray-950   { background-color: #f8fafc !important; }
+html[data-theme="light"] .bg-gray-900\/30 { background-color: rgba(241,245,249,0.6) !important; }
+html[data-theme="light"] .bg-gray-900\/60 { background-color: rgba(241,245,249,0.85) !important; }
+html[data-theme="light"] .bg-gray-900\/40 { background-color: rgba(241,245,249,0.7) !important; }
+html[data-theme="light"] .bg-gray-950\/45 { background-color: rgba(241,245,249,0.8) !important; }
+html[data-theme="light"] .bg-gray-950\/65 { background-color: rgba(248,250,252,0.9) !important; }
+html[data-theme="light"] .bg-gray-950\/40 { background-color: rgba(248,250,252,0.8) !important; }
+html[data-theme="light"] .bg-gray-950\/20 { background-color: rgba(241,245,249,0.6) !important; }
+
+html[data-theme="light"] .hover\:bg-gray-700:hover { background-color: #cbd5e1 !important; }
+html[data-theme="light"] .hover\:bg-gray-900\/30:hover { background-color: rgba(6,182,212,0.06) !important; }
+
+html[data-theme="light"] .divide-gray-800 > * + * { border-color: rgba(226,232,240,0.9) !important; }
+
+/* ── Additional light mode fixes ────────────────────────────────── */
+
+/* Borders */
+html[data-theme="light"] .border-gray-850  { border-color: rgba(30,41,59,0.12) !important; }
+html[data-theme="light"] .border-gray-850\/40 { border-color: rgba(30,41,59,0.09) !important; }
+html[data-theme="light"] .border-gray-800\/80 { border-color: rgba(30,41,59,0.12) !important; }
+
+/* Product card header gradient overlay */
+html[data-theme="light"] .bg-gradient-to-r.from-cyan-600\/30 {
+    background: linear-gradient(to right, rgba(6,182,212,0.12), rgba(139,92,246,0.12)) !important;
+}
+
+/* Category / geraet badge — was cyan-950/80 (near black) */
+html[data-theme="light"] .bg-cyan-950\/80 {
+    background-color: rgba(6,182,212,0.12) !important;
+}
+html[data-theme="light"] .border-cyan-800\/40 {
+    border-color: rgba(6,182,212,0.35) !important;
+}
+
+/* System-Nr. box inside product card */
+html[data-theme="light"] .bg-gray-900.rounded-xl {
+    background-color: #f1f5f9 !important;
+}
+
+/* Stock panel bg */
+html[data-theme="light"] .bg-gray-950\/60 { background-color: rgba(241,245,249,0.85) !important; }
+
+/* ── Action buttons (Entnehmen / Auffüllen) ─────────────────────── */
+html[data-theme="light"] .bg-red-950\/40 {
+    background-color: rgba(239,68,68,0.1) !important;
+}
+html[data-theme="light"] .border-red-500\/20 {
+    border-color: rgba(239,68,68,0.35) !important;
+}
+html[data-theme="light"] .text-red-400 {
+    color: #dc2626 !important;
+}
+html[data-theme="light"] .bg-emerald-950\/40 {
+    background-color: rgba(16,185,129,0.1) !important;
+}
+html[data-theme="light"] .border-emerald-500\/20 {
+    border-color: rgba(16,185,129,0.35) !important;
+}
+html[data-theme="light"] .text-emerald-400 {
+    color: #059669 !important;
+}
+
+/* Edit button bg */
+html[data-theme="light"] .bg-gray-900:not(.rounded-xl) {
+    background-color: #f1f5f9 !important;
+}
+
+/* Modal header chrome */
+html[data-theme="light"] .bg-gray-950\/40 {
+    background-color: rgba(241,245,249,0.8) !important;
+}
+
+/* Modal cancel button */
+html[data-theme="light"] .bg-gray-800 {
+    background-color: #e2e8f0 !important;
+}
+html[data-theme="light"] .hover\:bg-gray-700:hover {
+    background-color: #cbd5e1 !important;
+}
+html[data-theme="light"] .text-gray-300 {
+    color: #334155 !important;
+}
+
+/* Show-page back-link + edit button border */
+html[data-theme="light"] .border-gray-800.hover\:border-cyan-500\/30 {
+    border-color: rgba(30,41,59,0.18) !important;
+}
+
+/* User-name chip border */
+html[data-theme="light"] .bg-gray-900\/60.border-gray-800 {
+    border-color: rgba(30,41,59,0.15) !important;
+}
+
+/* Dashed placeholder card */
+html[data-theme="light"] .border-dashed.border-gray-800 {
+    border-color: rgba(30,41,59,0.2) !important;
+}
+
+/* ── New article modal: template search box ──────────────────────── */
+html[data-theme="light"] .bg-cyan-950\/20 {
+    background-color: rgba(6,182,212,0.07) !important;
+}
+html[data-theme="light"] .border-cyan-800\/30 {
+    border-color: rgba(6,182,212,0.3) !important;
+}
+
+/* ── Label print modal: size toggle buttons (inactive state) ─────── */
+/* Alpine :class drives active/inactive; the inactive bg-gray-900 is
+   already caught by bg-gray-900:not(.rounded-xl). Override text too. */
+html[data-theme="light"] .bg-gray-900.border-gray-800.text-gray-400 {
+    background-color: #f1f5f9 !important;
+    border-color: rgba(30,41,59,0.18) !important;
+    color: #475569 !important;
+}
+html[data-theme="light"] .hover\:text-gray-200:hover {
+    color: #0f172a !important;
+}
+
+/* ── Label print modal: fields checkbox area ─────────────────────── */
+html[data-theme="light"] .bg-gray-950\/40 {
+    background-color: rgba(241,245,249,0.8) !important;
+}
+/* Checkbox labels text (already caught by text-gray-300, but for clarity) */
+html[data-theme="light"] label.text-gray-300 {
+    color: #334155 !important;
+}
+html[data-theme="light"] .text-gray-500 {
+    color: #64748b !important;
+}
+
+/* Checkbox inputs: force visible appearance in light mode */
+html[data-theme="light"] input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    background-color: #ffffff !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 4px;
+    accent-color: #06b6d4;
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+/* ── Label print modal: live-preview outer container ─────────────── */
+html[data-theme="light"] .bg-gray-950 {
+    background-color: #e2e8f0 !important;
+}
+
+/* ── Print modal: footer strip bg ───────────────────────────────── */
+html[data-theme="light"] .bg-gray-950\/20 {
+    background-color: rgba(241,245,249,0.6) !important;
+}
+
+/* ── Table: stock counter color in light mode ────────────────────── */
+/* text-gray-200 used for "normal" stock numbers in the table */
+html[data-theme="light"] .text-gray-200 {
+    color: #1e293b !important;
+}
+
+/* ── Export + search reset button ────────────────────────────────── */
+html[data-theme="light"] .bg-gray-800.border-gray-700 {
+    background-color: #e2e8f0 !important;
+    border-color: rgba(30,41,59,0.2) !important;
+}
+html[data-theme="light"] .text-gray-200.border-gray-700 {
+    color: #334155 !important;
+}
+
+/* ── Autocomplete template dropdown ──────────────────────────────── */
+html[data-theme="light"] .bg-gray-950.border-gray-800.rounded-xl {
+    background-color: #ffffff !important;
+    border-color: rgba(30,41,59,0.15) !important;
+}
+html[data-theme="light"] .divide-gray-850 > * + * {
+    border-color: rgba(30,41,59,0.08) !important;
+}
+
+/* ── Paginator strip ─────────────────────────────────────────────── */
+html[data-theme="light"] .bg-gray-950\/45 {
+    background-color: rgba(241,245,249,0.8) !important;
+}
+
+/* ── Table stock inline form bg ──────────────────────────────────── */
+html[data-theme="light"] .bg-gray-900\/60 {
+    background-color: rgba(241,245,249,0.9) !important;
+}
+html[data-theme="light"] .text-gray-200.font-bold.font-mono {
+    color: #1e293b !important;
+}
+
+html[data-theme="light"] header.glass-panel {
+    background: rgba(255,255,255,0.95) !important;
+    border-color: rgba(226,232,240,0.9) !important;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+}
+
+html[data-theme="light"] footer {
+    background: rgba(241,245,249,0.7) !important;
+    border-color: rgba(226,232,240,0.9) !important;
+}
+
+html[data-theme="light"] h2,
+html[data-theme="light"] h3,
+html[data-theme="light"] h4 {
+    color: #0f172a;
+}
+
+/* Table rows in light mode */
+html[data-theme="light"] tbody tr:hover {
+    background-color: rgba(6,182,212,0.05) !important;
+}
+
+html[data-theme="light"] thead tr {
+    background-color: rgba(241,245,249,0.95) !important;
+}
+
+/* Modals in light mode */
+html[data-theme="light"] .glass-panel.max-w-lg,
+html[data-theme="light"] .glass-panel.max-w-2xl,
+html[data-theme="light"] .glass-panel.max-w-sm,
+html[data-theme="light"] .glass-panel.p-8 {
+    background: rgba(255,255,255,0.98) !important;
+    border-color: rgba(30,41,59,0.12) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important;
+    color: #1e293b;
+}
+
+html[data-theme="light"] .glass-panel.max-w-lg h3,
+html[data-theme="light"] .glass-panel.max-w-2xl h3,
+html[data-theme="light"] .glass-panel.max-w-sm h3,
+html[data-theme="light"] .glass-panel.p-8 h3 {
+    color: #0f172a;
+}
+
+/* Custom Tooltip styling */
+.has-tooltip {
+    cursor: help;
+}
+
+.tooltip-item {
+    display: none;
+}
+
+/* Floating Global Tooltip styling */
+.global-tooltip-item {
+    position: absolute;
+    z-index: 9999;
+    background-color: var(--sck-tooltip-bg);
+    color: var(--sck-tooltip-color);
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    width: 220px;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    transform: translateY(4px);
+}
+
+.global-tooltip-item.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 190px;
+    background-color: var(--sck-ctx-bg);
+    border: 1px solid var(--sck-ctx-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    padding: 0.35rem 0;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.55rem 0.95rem;
+    font-size: 0.8rem;
+    color: var(--sck-ctx-color);
+    transition: all 0.12s ease;
+    text-align: left;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.context-menu-item:hover {
+    background-color: var(--sck-ctx-hover-bg);
+    color: var(--sck-ctx-hover-color);
+}
+
+.context-menu-item i {
+    width: 1.25rem;
+    margin-right: 0.5rem;
+    text-align: center;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: var(--sck-ctx-divider);
+    margin: 0.35rem 0;
+}
+
+/* Print CSS */
+.print-label-container {
+    background: white;
+    color: black;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    font-family: 'Figtree', sans-serif;
+}
+
+.print-label-container.size-small {
+    width: 320px;
+    height: 180px;
+}
+
+.print-label-container.size-big {
+    width: 480px;
+    height: 300px;
+    padding: 1.5rem;
+}
+
+/* Print via popup window — no @media print needed on the main page */
+
+/* Neon buttons */
+.btn-neon-cyan {
+    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    box-shadow: 0 4px 14px rgba(6, 182, 212, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-neon-cyan:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.45);
+}
+
+.btn-neon-purple {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-neon-purple:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+}
+
+/* Custom styled inputs */
+.sck-input {
+    background-color: var(--sck-input-bg);
+    border: 1px solid var(--sck-input-border);
+    color: var(--sck-input-color);
+    transition: all 0.2s ease;
+}
+
+.sck-input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    outline: none;
+}
+
+#theme-toggle {
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+#theme-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* ── Artikel-Nr Warning Banner ────────────────────────────────────── */
+.sck-artNr-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    background-color: rgba(245, 158, 11, 0.10);
+    margin-top: 0.25rem;
+}
+
+.sck-artNr-warning i {
+    color: #f59e0b;
+    margin-top: 0.125rem;
+    flex-shrink: 0;
+}
+
+.sck-artNr-warning span {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #92400e;
+}
+
+html[data-theme="light"] .sck-artNr-warning {
+    background-color: rgba(254, 243, 199, 0.9);
+    border-color: rgba(245, 158, 11, 0.55);
+}
+
+html[data-theme="light"] .sck-artNr-warning span {
+    color: #78350f;
+}
+
+/* Dark mode warning text */
+html:not([data-theme="light"]) .sck-artNr-warning span {
+    color: #fcd34d;
+}
+
+/* ── Reroll Button ────────────────────────────────────────────────── */
+.sck-reroll-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--sck-input-border);
+    background-color: var(--sck-input-bg);
+    color: var(--sck-input-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.sck-reroll-btn:hover {
+    border-color: rgba(6, 182, 212, 0.5);
+    color: #06b6d4;
+    background-color: rgba(6, 182, 212, 0.08);
+}
+
+.sck-reroll-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+

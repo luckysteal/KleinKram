@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\BarController;
 use App\Http\Controllers\Admin\DrinkController;
 use App\Http\Controllers\Admin\DatingMatchResultController;
 use App\Http\Controllers\Admin\DatingQuestionController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -15,4 +16,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('drinks', DrinkController::class);
     Route::resource('dating-match-results', DatingMatchResultController::class);
     Route::resource('dating-questions', DatingQuestionController::class);
+
+    // User Management
+    Route::resource('users', UserController::class);
+    Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
 });
