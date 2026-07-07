@@ -14,6 +14,9 @@ class SckWarehouseItem extends Model
     protected $fillable = [
         'bezeichnung',
         'geraet',
+        'artikelgruppe',
+        'einheit',
+        'steuersatz',
         'lieferant',
         'ek_ohne_st',
         'vk_ohne_st',

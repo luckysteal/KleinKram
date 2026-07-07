@@ -347,6 +347,14 @@ html[data-theme="light"] .glass-panel.p-8 h3 {
     cursor: help;
 }
 
+button.has-tooltip,
+a.has-tooltip,
+.btn-neon-cyan.has-tooltip,
+.btn-neon-purple.has-tooltip,
+[role="button"].has-tooltip {
+    cursor: pointer;
+}
+
 .tooltip-item {
     display: none;
 }
@@ -560,5 +568,38 @@ html:not([data-theme="light"]) .sck-artNr-warning span {
 .sck-reroll-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* ── Product Show Modal Styling & Theme Adaptations ───────────────── */
+.show-modal-title {
+    color: var(--sck-body-color) !important;
+}
+.show-modal-value {
+    color: var(--sck-body-color) !important;
+}
+.show-modal-badge {
+    background-color: rgba(6, 182, 212, 0.12) !important;
+    color: #22d3ee !important;
+    border: 1px solid rgba(6, 182, 212, 0.25) !important;
+}
+html[data-theme="light"] .show-modal-badge {
+    background-color: rgba(6, 182, 212, 0.08) !important;
+    color: #0369a1 !important;
+    border: 1px solid rgba(6, 182, 212, 0.25) !important;
+}
+.show-modal-stock-text {
+    color: #22d3ee !important;
+}
+html[data-theme="light"] .show-modal-stock-text {
+    color: #0891b2 !important;
+}
+.show-modal-comment {
+    background-color: rgba(17, 24, 39, 0.4) !important;
+    color: #d1d5db !important;
+}
+html[data-theme="light"] .show-modal-comment {
+    background-color: rgba(241, 245, 249, 0.8) !important;
+    color: #334155 !important;
+    border-color: rgba(30, 41, 59, 0.15) !important;
 }
 

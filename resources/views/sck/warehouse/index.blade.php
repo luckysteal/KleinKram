@@ -6,21 +6,26 @@
     openEditModal: false, 
     openPrintModal: false,
     openZoomModal: false,
+    openShowModal: {{ isset($showItem) ? 'true' : 'false' }},
+    wasOpenedFromShowModal: false,
     addArtikelNr: '',
     addArtikelNrLoading: false,
     addArtikelNrError: '',
     editArtikelNrError: '',
     selectedItem: {
-        id: '',
-        bezeichnung: '',
-        geraet: '',
-        lieferant: '',
-        ek_ohne_st: '',
-        vk_ohne_st: '',
-        alte_artikelnummer: '',
-        neue_artikelnummer: '',
-        stueckzahl: 0,
-        kommentar: ''
+        id: '{{ isset($showItem) ? $showItem->id : '' }}',
+        bezeichnung: '{{ isset($showItem) ? addslashes($showItem->bezeichnung) : '' }}',
+        geraet: '{{ isset($showItem) ? addslashes($showItem->geraet) : '' }}',
+        artikelgruppe: '{{ isset($showItem) ? addslashes($showItem->artikelgruppe ?? '') : '' }}',
+        einheit: '{{ isset($showItem) ? addslashes($showItem->einheit ?? 'Stück') : 'Stück' }}',
+        steuersatz: '{{ isset($showItem) ? $showItem->steuersatz ?? '19' : '19' }}',
+        lieferant: '{{ isset($showItem) ? addslashes($showItem->lieferant) : '' }}',
+        ek_ohne_st: '{{ isset($showItem) ? number_format($showItem->ek_ohne_st, 2, '.', '') : '' }}',
+        vk_ohne_st: '{{ isset($showItem) ? number_format($showItem->vk_ohne_st, 2, '.', '') : '' }}',
+        alte_artikelnummer: '{{ isset($showItem) ? $showItem->alte_artikelnummer : '' }}',
+        neue_artikelnummer: '{{ isset($showItem) ? $showItem->neue_artikelnummer : '' }}',
+        stueckzahl: {{ isset($showItem) ? $showItem->stueckzahl : 0 }},
+        kommentar: '{{ isset($showItem) ? addslashes($showItem->kommentar ?? '') : '' }}'
     },
     printSize: 'small',
     printFields: {
@@ -35,6 +40,24 @@
     tplQuery: '',
     tplResults: [],
     tplLoading: false,
+    init() {
+        if (this.openShowModal) {
+            this.$nextTick(() => {
+                renderDetailQR();
+            });
+        }
+        this.$watch('openShowModal', val => {
+            if (val) {
+                this.$nextTick(() => {
+                    renderDetailQR();
+                });
+            } else {
+                if (window.location.pathname.includes('/artikel/')) {
+                    history.pushState(null, '', '{{ route('sck.lager.index') }}');
+                }
+            }
+        });
+    },
     searchTemplate() {
         if (this.tplQuery.length < 2) {
             this.tplResults = [];
@@ -132,6 +155,10 @@
                             <i class="fa-solid fa-file-lines text-purple-400"></i>
                             <span>Ohne Lagerbestand (nur Katalog)</span>
                         </a>
+                        <a href="{{ route('sck.lager.export-datev') }}" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors border-t border-gray-800">
+                            <i class="fa-solid fa-file-invoice text-emerald-400"></i>
+                            <span>DATEV Export (CSV)</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -209,7 +236,14 @@
                             <a href="{{ route('sck.lager.index', array_merge(request()->query(), ['sort_by' => 'geraet', 'sort_dir' => request('sort_by') === 'geraet' && request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center space-x-1 hover:text-cyan-400 transition-colors has-tooltip">
                                 <span>Gerät</span>
                                 <i class="fa-solid fa-sort text-[10px]"></i>
-                                <div class="tooltip-item">Der Gerätetyp oder die Kategorie des Artikels.</div>
+                                <div class="tooltip-item">Der Gerätetyp oder die Bezeichnung der Maschine.</div>
+                            </a>
+                        </th>
+                        <th class="py-4 px-4">
+                            <a href="{{ route('sck.lager.index', array_merge(request()->query(), ['sort_by' => 'artikelgruppe', 'sort_dir' => request('sort_by') === 'artikelgruppe' && request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center space-x-1 hover:text-cyan-400 transition-colors has-tooltip">
+                                <span>Artikelgruppe</span>
+                                <i class="fa-solid fa-sort text-[10px]"></i>
+                                <div class="tooltip-item">Die DATEV-Artikelgruppe des Artikels.</div>
                             </a>
                         </th>
                         <th class="py-4 px-4">
@@ -232,7 +266,9 @@
                                 <div class="tooltip-item">Verkaufspreis netto (ohne Steuer) pro Einheit.</div>
                             </a>
                         </th>
-                        <th class="py-4 px-4 text-center">Alte Nr.</th>
+                        <th class="py-4 px-4 text-center">Einheit</th>
+                        <th class="py-4 px-4 text-center font-semibold">Steuer</th>
+                        <th class="py-4 px-4 text-center font-normal">Alte Nr.</th>
                         <th class="py-4 px-4 text-center">
                             <a href="{{ route('sck.lager.index', array_merge(request()->query(), ['sort_by' => 'neue_artikelnummer', 'sort_dir' => request('sort_by') === 'neue_artikelnummer' && request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center justify-center space-x-1 hover:text-cyan-400 transition-colors has-tooltip">
                                 <span>Neue Nr.</span>
@@ -257,6 +293,9 @@
                             data-id="{{ $item->id }}"
                             data-bezeichnung="{{ $item->bezeichnung }}"
                             data-geraet="{{ $item->geraet }}"
+                            data-artikelgruppe="{{ $item->artikelgruppe ?? '' }}"
+                            data-einheit="{{ $item->einheit ?? '' }}"
+                            data-steuersatz="{{ $item->steuersatz ?? '' }}"
                             data-lieferant="{{ $item->lieferant }}"
                             data-ek="{{ number_format($item->ek_ohne_st, 2, '.', '') }}"
                             data-vk="{{ number_format($item->vk_ohne_st, 2, '.', '') }}"
@@ -265,14 +304,35 @@
                             data-stueckzahl="{{ $item->stueckzahl }}"
                             data-kommentar="{{ $item->kommentar ?? '' }}">
                             <td class="py-4 px-5 font-semibold text-gray-200">
-                                <a href="{{ route('sck.lager.artikel', $item->neue_artikelnummer) }}" class="hover:text-cyan-400 transition-colors">
+                                <a href="{{ route('sck.lager.artikel', $item->neue_artikelnummer) }}" 
+                                   @click.prevent="selectedItem = {
+                                        id: '{{ $item->id }}',
+                                        bezeichnung: '{{ addslashes($item->bezeichnung) }}',
+                                        geraet: '{{ addslashes($item->geraet) }}',
+                                        artikelgruppe: '{{ addslashes($item->artikelgruppe ?? '') }}',
+                                        einheit: '{{ addslashes($item->einheit ?? 'Stück') }}',
+                                        steuersatz: '{{ $item->steuersatz ?? '19' }}',
+                                        lieferant: '{{ addslashes($item->lieferant) }}',
+                                        ek_ohne_st: '{{ number_format($item->ek_ohne_st, 2, '.', '') }}',
+                                        vk_ohne_st: '{{ number_format($item->vk_ohne_st, 2, '.', '') }}',
+                                        alte_artikelnummer: '{{ $item->alte_artikelnummer ?? '' }}',
+                                        neue_artikelnummer: '{{ $item->neue_artikelnummer }}',
+                                        stueckzahl: '{{ $item->stueckzahl }}',
+                                        kommentar: '{{ addslashes($item->kommentar ?? '') }}'
+                                   };
+                                   openShowModal = true;
+                                   history.pushState(null, '', '{{ route('sck.lager.artikel', $item->neue_artikelnummer) }}');"
+                                   class="hover:text-cyan-400 transition-colors">
                                     {{ $item->bezeichnung }}
                                 </a>
                             </td>
                             <td class="py-4 px-4 text-gray-300">{{ $item->geraet }}</td>
+                            <td class="py-4 px-4 text-gray-300 text-xs font-semibold">{{ $item->artikelgruppe ?? '-' }}</td>
                             <td class="py-4 px-4 text-gray-400">{{ $item->lieferant }}</td>
                             <td class="py-4 px-4 text-right text-gray-300 font-mono">{{ number_format($item->ek_ohne_st, 2, ',', '.') }} €</td>
                             <td class="py-4 px-4 text-right text-gray-300 font-mono">{{ number_format($item->vk_ohne_st, 2, ',', '.') }} €</td>
+                            <td class="py-4 px-4 text-center text-gray-300">{{ $item->einheit ?? 'Stück' }}</td>
+                            <td class="py-4 px-4 text-center text-gray-400 font-mono">{{ $item->steuersatz ?? '19' }}%</td>
                             <td class="py-4 px-4 text-center text-gray-500 font-mono">{{ $item->alte_artikelnummer ?? '-' }}</td>
                             <td class="py-4 px-4 text-center text-cyan-400 font-mono font-bold">{{ $item->neue_artikelnummer }}</td>
                             <td class="py-3 px-4 text-center">
@@ -282,6 +342,9 @@
                                         id: '{{ $item->id }}',
                                         bezeichnung: '{{ addslashes($item->bezeichnung) }}',
                                         geraet: '{{ addslashes($item->geraet) }}',
+                                        artikelgruppe: '{{ addslashes($item->artikelgruppe ?? '') }}',
+                                        einheit: '{{ addslashes($item->einheit ?? 'Stück') }}',
+                                        steuersatz: '{{ $item->steuersatz ?? '19' }}',
                                         lieferant: '{{ addslashes($item->lieferant) }}',
                                         ek_ohne_st: '{{ number_format($item->ek_ohne_st, 2, '.', '') }}',
                                         vk_ohne_st: '{{ number_format($item->vk_ohne_st, 2, '.', '') }}',
@@ -350,7 +413,7 @@
 
 
     <!-- Create Product Modal Overlay -->
-    <div x-show="openAddModal" @keydown.escape.window="openAddModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75" x-cloak>
+    <div x-show="openAddModal" @keydown.escape.window="openAddModal = false" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75" x-cloak>
         <div @click.away="openAddModal = false" class="glass-panel max-w-lg w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
                 <h3 class="text-lg font-black flex items-center space-x-2">
@@ -422,6 +485,37 @@
                             <div class="tooltip-item">Unternehmen, das den Artikel liefert (z. B. 'Würth GmbH', 'Bosch Professional').</div>
                         </label>
                         <input type="text" name="lieferant" id="lieferant" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
+                        <label for="artikelgruppe" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
+                            <span>Artikelgruppe</span>
+                            <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
+                            <div class="tooltip-item">DATEV Artikelgruppe (z. B. 'Ersatzteile Kaffee', 'Dienstleistung').</div>
+                        </label>
+                        <input type="text" name="artikelgruppe" id="artikelgruppe" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
+                        <label for="einheit" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
+                            <span>Einheit *</span>
+                            <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
+                            <div class="tooltip-item">Maßeinheit für den Verkauf (z. B. 'Stück', 'Std.', 'Meter').</div>
+                        </label>
+                        <input type="text" name="einheit" id="einheit" value="Stück" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
+                        <label for="steuersatz" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
+                            <span>Steuersatz *</span>
+                            <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
+                            <div class="tooltip-item">DATEV Steuersatz für den Artikel.</div>
+                        </label>
+                        <select name="steuersatz" id="steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1 bg-gray-900 border border-gray-700 text-white">
+                            <option value="19" selected>19% (normal)</option>
+                            <option value="7">7% (ermäßigt)</option>
+                            <option value="0">0% (steuerfrei)</option>
+                        </select>
                     </div>
 
                     <div class="flex flex-col space-y-1">
@@ -515,14 +609,14 @@
     </div>
 
     <!-- Edit Product Modal Overlay -->
-    <div x-show="openEditModal" @keydown.escape.window="openEditModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75" x-cloak>
-        <div @click.away="openEditModal = false" class="glass-panel max-w-lg w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div x-show="openEditModal" @keydown.escape.window="openEditModal = false; if (wasOpenedFromShowModal) { openShowModal = true; wasOpenedFromShowModal = false; }" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75" x-cloak>
+        <div @click.away="openEditModal = false; if (wasOpenedFromShowModal) { openShowModal = true; wasOpenedFromShowModal = false; }" class="glass-panel max-w-lg w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
                 <h3 class="text-lg font-black flex items-center space-x-2">
                     <i class="fa-solid fa-pen text-cyan-400"></i>
                     <span>Artikel bearbeiten</span>
                 </h3>
-                <button @click="openEditModal = false" class="text-gray-500 hover:text-gray-300 transition-colors">
+                <button @click="openEditModal = false; if (wasOpenedFromShowModal) { openShowModal = true; wasOpenedFromShowModal = false; }" class="text-gray-500 hover:text-gray-300 transition-colors">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -548,6 +642,25 @@
                     </div>
 
                     <div class="flex flex-col space-y-1">
+                        <label for="edit_artikelgruppe" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Artikelgruppe</label>
+                        <input type="text" name="artikelgruppe" id="edit_artikelgruppe" x-model="selectedItem.artikelgruppe" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
+                        <label for="edit_einheit" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Einheit *</label>
+                        <input type="text" name="einheit" id="edit_einheit" x-model="selectedItem.einheit" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
+                        <label for="edit_steuersatz" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Steuersatz *</label>
+                        <select name="steuersatz" id="edit_steuersatz" x-model="selectedItem.steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1 bg-gray-900 border border-gray-700 text-white">
+                            <option value="19">19% (normal)</option>
+                            <option value="7">7% (ermäßigt)</option>
+                            <option value="0">0% (steuerfrei)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col space-y-1">
                         <label for="edit_ek_ohne_st" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">EK Netto (in €) *</label>
                         <input type="number" name="ek_ohne_st" id="edit_ek_ohne_st" step="0.01" min="0" x-model="selectedItem.ek_ohne_st" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
@@ -563,32 +676,39 @@
                     </div>
 
                     <!-- Neue Artikelnummer field (editable) -->
-                    <div class="flex flex-col space-y-1 sm:col-span-2">
-                        <label for="edit_neue_artikelnummer" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1">
-                            <span>Neue Artikelnummer</span>
-                            <span class="ml-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">5-stellig</span>
-                        </label>
-                        <!-- Warning Banner -->
-                        <div class="sck-artNr-warning">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>
-                                <strong>Achtung:</strong> Das Ändern der Artikelnummer macht alle bestehenden QR-Etiketten ungültig. Nur ändern, wenn wirklich nötig und alle Etiketten neu gedruckt werden.
-                            </span>
+                    <div class="flex flex-col space-y-1 sm:col-span-2" x-data="{ showArtNrEdit: false }">
+                        <button type="button" @click="showArtNrEdit = !showArtNrEdit" class="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center space-x-1.5 focus:outline-none transition-colors w-fit">
+                            <i class="fa-solid" :class="showArtNrEdit ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                            <span>Artikelnummer ändern / Neu generieren</span>
+                        </button>
+                        
+                        <div x-show="showArtNrEdit" x-transition class="space-y-2 mt-2" x-cloak>
+                            <label for="edit_neue_artikelnummer" class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1">
+                                <span>Neue Artikelnummer</span>
+                                <span class="ml-1 text-[9px] font-bold text-amber-400 uppercase tracking-wider">5-stellig</span>
+                            </label>
+                            <!-- Warning Banner -->
+                            <div class="sck-artNr-warning text-xs">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>
+                                    <strong>Achtung:</strong> Das Ändern der Artikelnummer macht alle bestehenden QR-Etiketten ungültig. Nur ändern, wenn wirklich nötig und alle Etiketten neu gedruckt werden.
+                                </span>
+                            </div>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <input type="text" name="neue_artikelnummer" id="edit_neue_artikelnummer"
+                                       x-model="selectedItem.neue_artikelnummer"
+                                       maxlength="5" minlength="5" pattern="[0-9]{5}"
+                                       required
+                                       class="sck-input text-sm rounded-lg px-3 py-2 font-mono font-bold flex-grow">
+                                <button type="button" @click="rerollEditArtikelNr()"
+                                        class="sck-reroll-btn"
+                                        title="Neue zufällige Nummer generieren">
+                                    <i class="fa-solid fa-dice"></i>
+                                    <span>Neu würfeln</span>
+                                </button>
+                            </div>
+                            <p x-show="editArtikelNrError" x-text="editArtikelNrError" class="text-red-400 text-xs mt-1" x-cloak></p>
                         </div>
-                        <div class="flex items-center space-x-2 mt-1">
-                            <input type="text" name="neue_artikelnummer" id="edit_neue_artikelnummer"
-                                   x-model="selectedItem.neue_artikelnummer"
-                                   maxlength="5" minlength="5" pattern="[0-9]{5}"
-                                   required
-                                   class="sck-input text-sm rounded-lg px-3 py-2 font-mono font-bold flex-grow">
-                            <button type="button" @click="rerollEditArtikelNr()"
-                                    class="sck-reroll-btn"
-                                    title="Neue zufällige Nummer generieren">
-                                <i class="fa-solid fa-dice"></i>
-                                <span>Neu würfeln</span>
-                            </button>
-                        </div>
-                        <p x-show="editArtikelNrError" x-text="editArtikelNrError" class="text-red-400 text-xs mt-1" x-cloak></p>
                     </div>
 
                     <div class="flex flex-col space-y-1">
@@ -603,7 +723,7 @@
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4 border-t border-gray-850">
-                    <button type="button" @click="openEditModal = false" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                    <button type="button" @click="openEditModal = false; if (wasOpenedFromShowModal) { openShowModal = true; wasOpenedFromShowModal = false; }" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
                         Abbrechen
                     </button>
                     <button type="submit" class="btn-neon-cyan text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200">
@@ -615,7 +735,7 @@
     </div>
 
     <!-- Label Print Modal Overlay -->
-    <div x-show="openPrintModal" @keydown.escape.window="openPrintModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75" x-cloak x-init="$watch('printSize', () => renderPrintQR()); $watch('openPrintModal', val => { if (val) $nextTick(() => renderPrintQR()); })">
+    <div x-show="openPrintModal" @keydown.escape.window="openPrintModal = false" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75" x-cloak x-init="$watch('printSize', () => renderPrintQR()); $watch('openPrintModal', val => { if (val) $nextTick(() => renderPrintQR()); })">
         <div @click.away="openPrintModal = false" class="glass-panel max-w-2xl w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
                 <h3 class="text-lg font-black flex items-center space-x-2">
@@ -725,8 +845,117 @@
         </div>
     </div>
 
+    <!-- Product Detail (Show) Modal Overlay -->
+    <div x-show="openShowModal" @keydown.escape.window="openShowModal = false" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75" x-cloak>
+        <div @click.away="openShowModal = false" class="glass-panel max-w-md w-full rounded-2xl border border-gray-800 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
+                <h3 class="text-lg font-black flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-cyan-400"></i>
+                    <span>Artikel-Details</span>
+                </h3>
+                <div class="flex items-center space-x-3">
+                    <button @click="openShowModal = false; openEditModal = true; wasOpenedFromShowModal = true" class="text-xs bg-gray-900 hover:bg-cyan-500/10 hover:text-cyan-400 border border-gray-800 hover:border-cyan-500/30 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition-all">
+                        <i class="fa-solid fa-pen"></i>
+                        <span>Bearbeiten</span>
+                    </button>
+                    <button @click="openShowModal = false" class="text-gray-500 hover:text-gray-300 transition-colors">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 flex-grow text-left">
+                <!-- Redesigned Header: More compact, larger QR code -->
+                <div class="flex items-center justify-between gap-4 pb-4 border-b border-gray-850">
+                    <div class="flex-grow min-w-0 space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xxs font-bold uppercase tracking-widest px-2 py-0.5 rounded show-modal-badge" x-text="selectedItem.geraet"></span>
+                            <span class="text-xxs font-mono font-bold text-gray-500 bg-gray-950/40 px-2 py-0.5 rounded border border-gray-850" x-text="'Nr: ' + selectedItem.neue_artikelnummer"></span>
+                        </div>
+                        <h2 class="text-lg font-black leading-tight show-modal-title break-words" x-text="selectedItem.bezeichnung"></h2>
+                    </div>
+                    <!-- Large QR Code display -->
+                    <div class="w-24 h-24 flex-shrink-0 bg-white p-1 rounded-lg shadow border border-gray-250 flex items-center justify-center overflow-hidden">
+                        <canvas id="detail-qr-canvas" class="w-full h-full block" width="96" height="96"></canvas>
+                    </div>
+                </div>
+
+                <!-- Specifications list -->
+                <div class="space-y-3.5 text-sm">
+                    <!-- Current Stock + Integrated Quick Actions -->
+                    <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-850 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Lagerbestand</span>
+                            <div class="text-xl font-black font-mono mt-0.5 show-modal-stock-text" :class="selectedItem.stueckzahl < 5 ? 'text-amber-500' : ''">
+                                <span x-text="selectedItem.stueckzahl"></span> Stk.
+                            </div>
+                        </div>
+                        
+                        <!-- Inline Quick Actions Form -->
+                        <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="flex items-center space-x-2 bg-gray-900/60 p-1 rounded-lg border border-gray-800 self-start sm:self-auto">
+                            @csrf
+                            <input type="hidden" name="item_id" :value="selectedItem.id">
+                            
+                            <button type="submit" name="action" value="remove" class="w-7 h-7 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Entnehmen">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            
+                            <input type="number" name="quantity" value="1" min="1" class="sck-input w-9 text-center text-xs py-0.5 px-0 rounded border-0 bg-transparent text-gray-200 font-bold font-mono focus:ring-0">
+                            
+                            <button type="submit" name="action" value="add" class="w-7 h-7 rounded bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Auffüllen">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Details List -->
+                    <div class="space-y-2 pt-1">
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Lieferant</span>
+                            <span class="show-modal-value font-semibold" x-text="selectedItem.lieferant"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40" x-show="selectedItem.artikelgruppe">
+                            <span class="text-gray-400 font-medium">Artikelgruppe</span>
+                            <span class="show-modal-value font-semibold" x-text="selectedItem.artikelgruppe"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Einheit</span>
+                            <span class="show-modal-value font-semibold" x-text="selectedItem.einheit || 'Stück'"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Steuersatz</span>
+                            <span class="show-modal-value font-mono font-semibold" x-text="(selectedItem.steuersatz || '19') + '%'"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Einkaufspreis (netto)</span>
+                            <span class="show-modal-value font-mono" x-text="parseFloat(selectedItem.ek_ohne_st).toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €'"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Verkaufspreis (netto)</span>
+                            <span class="show-modal-value font-mono" x-text="parseFloat(selectedItem.vk_ohne_st).toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €'"></span>
+                        </div>
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40">
+                            <span class="text-gray-400 font-medium">Alte Artikelnummer</span>
+                            <span class="show-modal-value font-mono" x-text="selectedItem.alte_artikelnummer || '-'"></span>
+                        </div>
+                        <div class="py-1" x-show="selectedItem.kommentar">
+                            <span class="text-gray-400 font-medium block mb-1">Lager-Hinweis / Kommentar:</span>
+                            <p class="show-modal-comment p-2.5 rounded-lg border border-gray-850 text-xs leading-relaxed" x-text="selectedItem.kommentar"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end p-4 border-t border-gray-850 bg-gray-950/20">
+                <button type="button" @click="openShowModal = false" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Global QR Zoom Modal -->
-    <div x-show="openZoomModal" @keydown.escape.window="openZoomModal = false" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80" x-cloak>
+    <div x-show="openZoomModal" @keydown.escape.window="openZoomModal = false" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80" x-cloak>
         <div @click.away="openZoomModal = false" class="glass-panel p-8 rounded-2xl border border-gray-800 text-center max-w-sm w-full space-y-6">
             <h3 class="text-xl font-bold" x-text="selectedItem.bezeichnung"></h3>
             <p class="text-xs text-gray-400">Artikelnummer: <span x-text="selectedItem.neue_artikelnummer"></span></p>
@@ -746,10 +975,10 @@
 
     <!-- Custom Left- & Right-Click Context Menu -->
     <div id="custom-context-menu" class="context-menu hidden" x-cloak>
-        <a :href="'{{ route('sck.lager.artikel', '') }}/' + selectedItem.neue_artikelnummer" class="context-menu-item">
+        <button type="button" @click="openShowModal = true; document.getElementById('custom-context-menu').classList.add('hidden'); history.pushState(null, '', '{{ route('sck.lager.artikel', '') }}/' + selectedItem.neue_artikelnummer); renderDetailQR();" class="context-menu-item">
             <i class="fa-solid fa-circle-info text-cyan-400"></i>
             <span>Details anzeigen</span>
-        </a>
+        </button>
         <button type="button" @click="openEditModal = true; document.getElementById('custom-context-menu').classList.add('hidden')" class="context-menu-item">
             <i class="fa-solid fa-pen text-purple-400"></i>
             <span>Artikel bearbeiten</span>
@@ -867,50 +1096,87 @@
                 const viewH = window.innerHeight;
 
                 // Flip horizontally if overflows right
-                let left = clientX + window.scrollX;
+                let left = clientX;
                 if (clientX + menuW + 12 > viewW) {
-                    left = clientX - menuW + window.scrollX;
+                    left = clientX - menuW;
                 }
                 // Clamp left
-                left = Math.max(8 + window.scrollX, left);
+                left = Math.max(8, left);
 
                 // Flip vertically if overflows bottom
-                let top = clientY + window.scrollY;
+                let top = clientY;
                 if (clientY + menuH + 12 > viewH) {
-                    top = clientY - menuH + window.scrollY;
+                    top = clientY - menuH;
                 }
                 // Clamp top
-                top = Math.max(8 + window.scrollY, top);
+                top = Math.max(8, top);
 
                 contextMenu.style.left = `${left}px`;
                 contextMenu.style.top  = `${top}px`;
                 contextMenu.classList.remove('hidden');
             }
 
+            function triggerContextMenu(row, clientX, clientY) {
+                const id = row.dataset.id;
+                const bezeichnung = row.dataset.bezeichnung;
+                const geraet = row.dataset.geraet;
+                const lieferant = row.dataset.lieferant;
+                const ek = row.dataset.ek;
+                const vk = row.dataset.vk;
+                const alteNr = row.dataset.alteNr;
+                const neueNr = row.dataset.neueNr;
+                const stueckzahl = parseInt(row.dataset.stueckzahl);
+                const kommentar = row.dataset.kommentar;
+
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                alpineData.selectedItem = {
+                    id, bezeichnung, geraet, lieferant,
+                    ek_ohne_st: ek, vk_ohne_st: vk,
+                    alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
+                    stueckzahl, kommentar
+                };
+
+                positionContextMenu(clientX, clientY);
+            }
+
+            let touchTimeout = null;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const LONG_PRESS_DURATION = 600; // ms
+
             document.querySelectorAll('.cursor-context-menu').forEach(row => {
                 row.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
+                    triggerContextMenu(row, e.clientX, e.clientY);
+                });
 
-                    const id = row.dataset.id;
-                    const bezeichnung = row.dataset.bezeichnung;
-                    const geraet = row.dataset.geraet;
-                    const lieferant = row.dataset.lieferant;
-                    const ek = row.dataset.ek;
-                    const vk = row.dataset.vk;
-                    const alteNr = row.dataset.alteNr;
-                    const neueNr = row.dataset.neueNr;
-                    const stueckzahl = parseInt(row.dataset.stueckzahl);
-                    const kommentar = row.dataset.kommentar;
+                row.addEventListener('touchstart', (e) => {
+                    if (e.touches.length !== 1) return;
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
 
-                    const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                    alpineData.selectedItem = {
-                        id, bezeichnung, geraet, lieferant,
-                        ek_ohne_st: ek, vk_ohne_st: vk,
-                        alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
-                        stueckzahl, kommentar
-                    };
+                    touchTimeout = setTimeout(() => {
+                        e.preventDefault();
+                        triggerContextMenu(row, touchStartX, touchStartY);
+                    }, LONG_PRESS_DURATION);
+                }, { passive: false });
 
-                    positionContextMenu(e.clientX, e.clientY);
+                row.addEventListener('touchmove', (e) => {
+                    if (touchTimeout) {
+                        const touch = e.touches[0];
+                        if (Math.abs(touch.clientX - touchStartX) > 10 || Math.abs(touch.clientY - touchStartY) > 10) {
+                            clearTimeout(touchTimeout);
+                            touchTimeout = null;
+                        }
+                    }
+                });
+
+                row.addEventListener('touchend', () => {
+                    if (touchTimeout) {
+                        clearTimeout(touchTimeout);
+                        touchTimeout = null;
+                    }
                 });
             });
 
@@ -969,6 +1235,28 @@
                             element: canvas,
                             value: targetUrl,
                             size: 180,
+                            background: '#ffffff',
+                            foreground: '#000000',
+                            level: 'H'
+                        });
+                    }
+                }, 50);
+            };
+
+            window.renderDetailQR = function() {
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const neueNr = alpineData.selectedItem.neue_artikelnummer;
+                if (!neueNr) return;
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('detail-qr-canvas');
+                    if (canvas) {
+                        new QRious({
+                            element: canvas,
+                            value: targetUrl,
+                            size: 96,
+                            padding: 0,
                             background: '#ffffff',
                             foreground: '#000000',
                             level: 'H'

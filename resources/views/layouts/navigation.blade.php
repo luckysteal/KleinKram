@@ -103,6 +103,9 @@
                                         <x-dropdown-link :href="route('admin.dating-questions.index')">
                                             {{ __('Manage Dating Questions') }}
                                         </x-dropdown-link>
+                                        <x-dropdown-link :href="route('admin.users.index')">
+                                            {{ __('Manage Users') }}
+                                        </x-dropdown-link>
                                     </x-slot>
                                 </x-dropdown>
                             </div>
@@ -265,6 +268,10 @@
                         <x-responsive-nav-link :href="route('admin.dating-questions.index')"
                             :active="request()->routeIs('admin.dating-questions.index')">
                             {{ __('Manage Dating Questions') }}
+                        </x-responsive-nav-link>
+                        <x-responsive-nav-link :href="route('admin.users.index')"
+                            :active="request()->routeIs('admin.users.*')">
+                            {{ __('Manage Users') }}
                         </x-responsive-nav-link>
                     </div>
                 @endif
