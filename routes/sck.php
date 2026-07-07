@@ -14,6 +14,7 @@ Route::middleware(['web', 'auth', 'sck'])->group(function () {
     Route::post('/lager/update', [SckWarehouseController::class, 'update'])->name('sck.lager.update');
     Route::post('/lager/update-stock', [SckWarehouseController::class, 'updateStock'])->name('sck.lager.update-stock');
     Route::get('/lager/export', [SckWarehouseController::class, 'export'])->name('sck.lager.export');
+    Route::get('/lager/export-datev', [SckWarehouseController::class, 'exportDatev'])->name('sck.lager.export-datev');
     Route::get('/lager/search-json', [SckWarehouseController::class, 'searchJson'])->name('sck.lager.search-json');
     Route::get('/lager/generate-number', [SckWarehouseController::class, 'generateNumber'])->name('sck.lager.generate-number');
     

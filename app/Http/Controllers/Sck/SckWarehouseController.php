@@ -31,14 +31,14 @@ class SckWarehouseController extends Controller
         $sortBy = $request->input('sort_by', 'bezeichnung');
         $sortDir = $request->input('sort_dir', 'asc');
         
-        $allowedSorts = ['bezeichnung', 'geraet', 'lieferant', 'ek_ohne_st', 'vk_ohne_st', 'stueckzahl', 'neue_artikelnummer'];
+        $allowedSorts = ['bezeichnung', 'geraet', 'artikelgruppe', 'lieferant', 'ek_ohne_st', 'vk_ohne_st', 'stueckzahl', 'neue_artikelnummer'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortDir);
         } else {
             $query->orderBy('bezeichnung', 'asc');
         }
 
-        $items = $query->paginate(30)->withQueryString();
+        $items = $query->paginate(15)->withQueryString();
 
         // Gather unique device categories for filters / stats
         $categories = SckWarehouseItem::select('geraet')->distinct()->pluck('geraet');
@@ -54,6 +54,9 @@ class SckWarehouseController extends Controller
         $validated = $request->validate([
             'bezeichnung' => 'required|string|max:255',
             'geraet' => 'required|string|max:255',
+            'artikelgruppe' => 'nullable|string|max:255',
+            'einheit' => 'nullable|string|max:255',
+            'steuersatz' => 'nullable|string|max:50',
             'lieferant' => 'required|string|max:255',
             'ek_ohne_st' => 'required|numeric|min:0',
             'vk_ohne_st' => 'required|numeric|min:0',
@@ -62,6 +65,13 @@ class SckWarehouseController extends Controller
             'stueckzahl' => 'required|integer|min:0',
             'kommentar' => 'nullable|string',
         ]);
+
+        if (empty($validated['einheit'])) {
+            $validated['einheit'] = 'Stück';
+        }
+        if (empty($validated['steuersatz'])) {
+            $validated['steuersatz'] = '19';
+        }
 
         // If no custom number was provided, the model's boot() will auto-generate one
         $item = SckWarehouseItem::create($validated);
@@ -235,8 +245,13 @@ class SckWarehouseController extends Controller
      */
     public function show($neue_artikelnummer)
     {
-        $item = SckWarehouseItem::where('neue_artikelnummer', $neue_artikelnummer)->firstOrFail();
-        return view('sck.warehouse.show', compact('item'));
+        $showItem = SckWarehouseItem::where('neue_artikelnummer', $neue_artikelnummer)->firstOrFail();
+
+        $query = SckWarehouseItem::query();
+        $items = $query->paginate(15)->withQueryString();
+        $categories = SckWarehouseItem::select('geraet')->distinct()->pluck('geraet');
+
+        return view('sck.warehouse.index', compact('items', 'categories', 'showItem'));
     }
 
     /**
@@ -248,6 +263,9 @@ class SckWarehouseController extends Controller
             'id' => 'required|exists:sck_warehouse_items,id',
             'bezeichnung' => 'required|string|max:255',
             'geraet' => 'required|string|max:255',
+            'artikelgruppe' => 'nullable|string|max:255',
+            'einheit' => 'nullable|string|max:255',
+            'steuersatz' => 'nullable|string|max:50',
             'lieferant' => 'required|string|max:255',
             'ek_ohne_st' => 'required|numeric|min:0',
             'vk_ohne_st' => 'required|numeric|min:0',
@@ -256,6 +274,13 @@ class SckWarehouseController extends Controller
             'stueckzahl' => 'required|integer|min:0',
             'kommentar' => 'nullable|string',
         ]);
+
+        if (empty($validated['einheit'])) {
+            $validated['einheit'] = 'Stück';
+        }
+        if (empty($validated['steuersatz'])) {
+            $validated['steuersatz'] = '19';
+        }
 
         $item = SckWarehouseItem::findOrFail($request->id);
         $item->update($validated);
@@ -290,5 +315,71 @@ class SckWarehouseController extends Controller
             ->get();
 
         return response()->json($items);
+    }
+
+    /**
+     * Export the product list as a DATEV-compatible CSV file.
+     */
+    public function exportDatev()
+    {
+        $items = SckWarehouseItem::orderBy('bezeichnung', 'asc')->get();
+
+        $fileName = 'DATEV_Artikelimport_' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function () use ($items) {
+            $file = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM
+            fwrite($file, "\xEF\xBB\xBF");
+
+            // CSV Header Row (exact DATEV Column names)
+            $columns = [
+                'Art.-Nr.',
+                'Bezeichnung',
+                'Einheit',
+                'Verkaufspreis (Netto)',
+                'Steuersatz',
+                'Artikelgruppe',
+                'Belegtext'
+            ];
+
+            fputcsv($file, $columns, ';');
+
+            foreach ($items as $item) {
+                // Map steuersatz to DATEV percentage string format
+                $steuersatzStr = $item->steuersatz;
+                if ($steuersatzStr === '19') {
+                    $steuersatzStr = '19%';
+                } elseif ($steuersatzStr === '7') {
+                    $steuersatzStr = '7%';
+                } elseif ($steuersatzStr === '0') {
+                    $steuersatzStr = '0%';
+                }
+
+                $row = [
+                    $item->neue_artikelnummer,
+                    $item->bezeichnung,
+                    $item->einheit ?: 'Stück',
+                    number_format((float)$item->vk_ohne_st, 2, ',', ''),
+                    $steuersatzStr,
+                    $item->artikelgruppe ?? '',
+                    $item->kommentar ?? '',
+                ];
+
+                fputcsv($file, $row, ';');
+            }
+
+            fclose($file);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
     }
 }

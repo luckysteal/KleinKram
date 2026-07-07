@@ -147,7 +147,7 @@
 </div>
 
 <!-- html5-qrcode scanner client-side dependency -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7WnmqQV91ky1scgK5mw517CdBzPm9ZglnqdWYce3t28f5qW9JH0Rfs3Meb3Obg0Gs4Eoo3100WgWYGP5w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
     function scannerApp() {
@@ -227,11 +227,29 @@
                     aspectRatio: 1.0
                 };
                 
-                this.html5Qrcode.start(
-                    { facingMode: "environment" }, 
-                    config, 
-                    (decodedText, decodedResult) => this.onScan(decodedText, decodedResult)
-                )
+                Html5Qrcode.getCameras().then(devices => {
+                    if (devices && devices.length > 0) {
+                        let cameraId = devices[0].id;
+                        for (const device of devices) {
+                            const label = device.label.toLowerCase();
+                            if (label.includes('back') || label.includes('rear') || label.includes('rück') || label.includes('umgebung')) {
+                                cameraId = device.id;
+                                break;
+                            }
+                        }
+                        return this.html5Qrcode.start(
+                            cameraId, 
+                            config, 
+                            (decodedText, decodedResult) => this.onScan(decodedText, decodedResult)
+                        );
+                    } else {
+                        return this.html5Qrcode.start(
+                            { facingMode: "environment" }, 
+                            config, 
+                            (decodedText, decodedResult) => this.onScan(decodedText, decodedResult)
+                        );
+                    }
+                })
                 .then(() => {
                     this.scanning = true;
                 })
