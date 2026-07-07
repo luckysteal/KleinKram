@@ -603,3 +603,71 @@ html[data-theme="light"] .show-modal-comment {
     border-color: rgba(30, 41, 59, 0.15) !important;
 }
 
+
+/* ── Scanner Overlay Styling & Theme Adaptations ─────────────────── */
+.scan-overlay-success {
+    background-color: rgba(6, 78, 59, 0.93) !important; /* bg-emerald-950/93 */
+    border-top: 2px solid rgba(16, 185, 129, 0.4) !important;
+    border-bottom: 2px solid rgba(16, 185, 129, 0.4) !important;
+}
+.scan-overlay-duplicate {
+    background-color: rgba(120, 53, 4, 0.93) !important; /* bg-amber-950/93 */
+    border-top: 2px solid rgba(245, 158, 11, 0.4) !important;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.4) !important;
+}
+.scan-overlay-error {
+    background-color: rgba(127, 29, 29, 0.93) !important; /* bg-red-950/93 */
+    border-top: 2px solid rgba(239, 68, 68, 0.4) !important;
+    border-bottom: 2px solid rgba(239, 68, 68, 0.4) !important;
+}
+
+.scan-feedback-title {
+    color: #ffffff !important;
+}
+.scan-feedback-text {
+    color: #d1d5db !important;
+}
+.scan-feedback-qty {
+    color: #e2e8f0 !important;
+}
+
+/* Light Theme overrides */
+html[data-theme="light"] .scan-overlay-success {
+    background-color: rgba(209, 250, 229, 0.95) !important; /* bg-emerald-50/95 */
+    border-top: 2px solid rgba(16, 185, 129, 0.5) !important;
+    border-bottom: 2px solid rgba(16, 185, 129, 0.5) !important;
+}
+html[data-theme="light"] .scan-overlay-duplicate {
+    background-color: rgba(254, 243, 199, 0.95) !important; /* bg-amber-50/95 */
+    border-top: 2px solid rgba(245, 158, 11, 0.5) !important;
+    border-bottom: 2px solid rgba(245, 158, 11, 0.5) !important;
+}
+html[data-theme="light"] .scan-overlay-error {
+    background-color: rgba(254, 226, 226, 0.95) !important; /* bg-red-50/95 */
+    border-top: 2px solid rgba(239, 68, 68, 0.5) !important;
+    border-bottom: 2px solid rgba(239, 68, 68, 0.5) !important;
+}
+
+html[data-theme="light"] .scan-feedback-title {
+    color: #064e3b !important;
+}
+html[data-theme="light"] .scan-overlay-duplicate .scan-feedback-title {
+    color: #78350f !important;
+}
+html[data-theme="light"] .scan-overlay-error .scan-feedback-title {
+    color: #7f1d1d !important;
+}
+
+html[data-theme="light"] .scan-feedback-text {
+    color: #047857 !important;
+}
+html[data-theme="light"] .scan-overlay-duplicate .scan-feedback-text {
+    color: #b45309 !important;
+}
+html[data-theme="light"] .scan-overlay-error .scan-feedback-text {
+    color: #b91c1c !important;
+}
+
+html[data-theme="light"] .scan-feedback-qty {
+    color: #065f46 !important;
+}

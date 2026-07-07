@@ -79,9 +79,9 @@
                          x-transition:leave-end="opacity-0 scale-95"
                          class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-20 backdrop-blur-md"
                          :class="{
-                             'bg-emerald-950/90 border-emerald-500/30': scanFeedback?.type === 'success',
-                             'bg-red-950/90 border-red-500/30': scanFeedback?.type === 'error',
-                             'bg-amber-950/90 border-amber-500/30': scanFeedback?.type === 'duplicate'
+                             'scan-overlay-success': scanFeedback?.type === 'success',
+                             'scan-overlay-error': scanFeedback?.type === 'error',
+                             'scan-overlay-duplicate': scanFeedback?.type === 'duplicate'
                          }"
                          x-cloak>
                          
@@ -94,10 +94,10 @@
                                  </div>
                                  <div class="space-y-1">
                                      <div class="text-xs uppercase font-extrabold tracking-widest" :class="scanFeedback.action === 'add' ? 'text-emerald-400' : 'text-rose-400'" x-text="scanFeedback.action === 'add' ? 'Erfolgreich Eingebucht' : 'Erfolgreich Ausgebucht'"></div>
-                                     <h4 class="text-xl font-bold text-white" x-text="scanFeedback.itemName"></h4>
-                                     <p class="text-sm font-mono text-gray-300">
-                                         Menge: <span class="font-bold text-white" x-text="scanFeedback.quantity"></span> Stk. 
-                                         (Neu: <span class="font-bold text-cyan-400" x-text="scanFeedback.newStock"></span> Stk.)
+                                     <h4 class="text-xl font-bold scan-feedback-title" x-text="scanFeedback.itemName"></h4>
+                                     <p class="text-sm font-mono scan-feedback-text">
+                                         Menge: <span class="font-bold scan-feedback-title" x-text="scanFeedback.quantity"></span> Stk. 
+                                         (Neu: <span class="font-bold text-cyan-400 scan-feedback-qty" x-text="scanFeedback.newStock"></span> Stk.)
                                      </p>
                                  </div>
                              </div>
@@ -111,8 +111,8 @@
                                  </div>
                                  <div class="space-y-1">
                                      <div class="text-xs uppercase font-extrabold tracking-widest text-amber-400">Doppelschutz Aktiv</div>
-                                     <h4 class="text-lg font-bold text-white" x-text="scanFeedback.itemName || 'Artikel bereits gescannt'"></h4>
-                                     <p class="text-xs text-gray-300">Wartezeit schützt vor versehentlicher Zweitbuchung.</p>
+                                     <h4 class="text-lg font-bold scan-feedback-title" x-text="scanFeedback.itemName || 'Artikel bereits gescannt'"></h4>
+                                     <p class="text-xs scan-feedback-text">Wartezeit schützt vor versehentlicher Zweitbuchung.</p>
                                  </div>
                              </div>
                          </template>
@@ -125,7 +125,7 @@
                                  </div>
                                  <div class="space-y-1">
                                      <div class="text-xs uppercase font-extrabold tracking-widest text-red-400">Fehler beim Scannen</div>
-                                     <p class="text-sm text-gray-200" x-text="scanFeedback.message"></p>
+                                     <p class="text-sm scan-feedback-text" x-text="scanFeedback.message"></p>
                                  </div>
                                  <button @click="scanFeedback = null" class="mt-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-4 py-2 rounded-xl transition-colors">
                                      Schließen
