@@ -46,4 +46,66 @@ class CleanSeederItemsTest extends TestCase
         $this->assertDatabaseMissing('sck_warehouse_items', ['alte_artikelnummer' => 'JU-BG-S9']);
         $this->assertDatabaseHas('sck_warehouse_items', ['id' => $realItem->id]);
     }
+
+    public function test_clean_seeder_items_with_detect_batches()
+    {
+        // We simulate a historical seeder batch by inserting multiple items with the exact same timestamp
+        $timestamp = now()->subDays(10)->startOfSecond();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $item = new SckWarehouseItem([
+                'bezeichnung' => "Historisches Dummy-Item {$i}",
+                'geraet' => 'Dummy Gerät',
+                'artikelgruppe' => 'Ersatzteile',
+                'einheit' => 'Stück',
+                'steuersatz' => '19',
+                'lieferant' => 'Dummy Vendor',
+                'ek_ohne_st' => 10.00,
+                'vk_ohne_st' => 20.00,
+                'alte_artikelnummer' => "DUMMY-OLD-{$i}",
+                'stueckzahl' => 1,
+            ]);
+            $item->created_at = $timestamp;
+            $item->updated_at = $timestamp;
+            $item->save();
+        }
+
+        // Create a real item created at a different time
+        $realItem = new SckWarehouseItem([
+            'bezeichnung' => 'Echtes Kundengerät',
+            'geraet' => 'Custom Model X',
+            'artikelgruppe' => 'Ersatzteile',
+            'einheit' => 'Stück',
+            'steuersatz' => '19',
+            'lieferant' => 'Real Vendor',
+            'ek_ohne_st' => 100.00,
+            'vk_ohne_st' => 200.00,
+            'alte_artikelnummer' => 'REAL-999',
+            'stueckzahl' => 5,
+        ]);
+        $realItem->created_at = now()->startOfSecond();
+        $realItem->updated_at = now()->startOfSecond();
+        $realItem->save();
+
+        // Run detection with --detect-batches and --dry-run
+        $this->artisan('db:clean-seeder-items', [
+            '--detect-batches' => true,
+            '--dry-run' => true
+        ])->assertExitCode(0);
+
+        // Verify no items were deleted in dry-run
+        $this->assertDatabaseHas('sck_warehouse_items', ['alte_artikelnummer' => 'DUMMY-OLD-1']);
+        $this->assertDatabaseHas('sck_warehouse_items', ['id' => $realItem->id]);
+
+        // Run deletion with --detect-batches and --force
+        $this->artisan('db:clean-seeder-items', [
+            '--detect-batches' => true,
+            '--force' => true
+        ])->assertExitCode(0);
+
+        // Verify older bulk batch deleted but single real item remains
+        $this->assertDatabaseMissing('sck_warehouse_items', ['alte_artikelnummer' => 'DUMMY-OLD-1']);
+        $this->assertDatabaseMissing('sck_warehouse_items', ['alte_artikelnummer' => 'DUMMY-OLD-10']);
+        $this->assertDatabaseHas('sck_warehouse_items', ['id' => $realItem->id]);
+    }
 }
