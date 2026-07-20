@@ -108,4 +108,46 @@ class CleanSeederItemsTest extends TestCase
         $this->assertDatabaseMissing('sck_warehouse_items', ['alte_artikelnummer' => 'DUMMY-OLD-10']);
         $this->assertDatabaseHas('sck_warehouse_items', ['id' => $realItem->id]);
     }
+
+    public function test_clean_seeder_items_with_created_on()
+    {
+        $targetDate = '2025-05-15';
+        $timestamp = date('Y-m-d H:i:s', strtotime($targetDate . ' 14:30:00'));
+
+        // Old dummy item
+        $oldItem = new SckWarehouseItem([
+            'bezeichnung' => 'Altes Seeder Item',
+            'geraet' => 'Dummy',
+            'lieferant' => 'Dummy',
+            'ek_ohne_st' => 10,
+            'vk_ohne_st' => 20,
+            'stueckzahl' => 1,
+        ]);
+        $oldItem->created_at = $timestamp;
+        $oldItem->updated_at = $timestamp;
+        $oldItem->save();
+
+        // Modern user item
+        $newItem = SckWarehouseItem::create([
+            'bezeichnung' => 'Echtes Kundengerät',
+            'geraet' => 'Custom Model X',
+            'lieferant' => 'Real Vendor',
+            'ek_ohne_st' => 100.00,
+            'vk_ohne_st' => 200.00,
+            'stueckzahl' => 5,
+        ]);
+
+        // Verify report prints
+        $this->artisan('db:clean-seeder-items', ['--report' => true])
+            ->assertExitCode(0);
+
+        // Deleting items from specific date
+        $this->artisan('db:clean-seeder-items', [
+            '--created-on' => $targetDate,
+            '--force' => true
+        ])->assertExitCode(0);
+
+        $this->assertDatabaseMissing('sck_warehouse_items', ['id' => $oldItem->id]);
+        $this->assertDatabaseHas('sck_warehouse_items', ['id' => $newItem->id]);
+    }
 }
