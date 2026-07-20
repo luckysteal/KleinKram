@@ -1,6 +1,7 @@
 import axios from 'axios';
 import Alpine from 'alpinejs';
 import QRious from 'qrious';
+import './modal-drag-guard';
 
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
@@ -14,3 +15,4 @@ if (token) {
 window.QRious = QRious;
 window.Alpine = Alpine;
 Alpine.start();
+

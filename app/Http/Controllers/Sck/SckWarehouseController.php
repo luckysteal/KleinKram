@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Sck;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sck\SckWarehouseItem;
+use App\Models\Sck\SckWarehouseLog;
+use App\Services\DatevInvoiceParserService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SckWarehouseController extends Controller
@@ -40,10 +43,43 @@ class SckWarehouseController extends Controller
 
         $items = $query->paginate(15)->withQueryString();
 
+        // Multi-select tracking IDs
+        $pageIds = $items->pluck('id')->map(fn($id) => (string)$id)->toArray();
+        $matchingIds = (clone $query)->pluck('id')->map(fn($id) => (string)$id)->toArray();
+        $selectedIds = session('sck_warehouse_selected_ids', []);
+
         // Gather unique device categories for filters / stats
         $categories = SckWarehouseItem::select('geraet')->distinct()->pluck('geraet');
 
-        return view('sck.warehouse.index', compact('items', 'categories'));
+        $logs = SckWarehouseLog::with('user')
+            ->orderBy('created_at', 'desc')
+            ->take(500)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'item_id' => $log->item_id,
+                    'success' => (bool)$log->success,
+                    'action' => $log->action,
+                    'type' => $log->type,
+                    'message' => $log->message,
+                    'time' => $log->created_at->timezone('Europe/Berlin')->format('d.m.Y H:i:s'),
+                ];
+            });
+
+        $showDatevStatus = (bool)session('sck_warehouse_show_datev_status', false);
+
+        return view('sck.warehouse.index', compact('items', 'categories', 'logs', 'pageIds', 'matchingIds', 'selectedIds', 'showDatevStatus'));
+    }
+
+    /**
+     * Store DATEV status column visibility preference in session.
+     */
+    public function storeDatevStatusToggle(Request $request)
+    {
+        $show = filter_var($request->input('show'), FILTER_VALIDATE_BOOLEAN);
+        session(['sck_warehouse_show_datev_status' => $show]);
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -98,13 +134,31 @@ class SckWarehouseController extends Controller
             $msg = "{$qty}x '{$item->bezeichnung}' erfolgreich aufgefüllt.";
         } else {
             if ($item->stueckzahl < $qty) {
-                return redirect()->back()->with('error', "Fehler: Es können nicht {$qty}x '{$item->bezeichnung}' entnommen werden, da nur {$item->stueckzahl}x vorhanden sind.");
+                $errorMsg = "Fehler: Es können nicht {$qty}x '{$item->bezeichnung}' entnommen werden, da nur {$item->stueckzahl}x vorhanden sind.";
+                SckWarehouseLog::create([
+                    'user_id' => auth()->id(),
+                    'item_id' => $item->id,
+                    'success' => false,
+                    'action' => 'remove',
+                    'type' => 'quick',
+                    'message' => $errorMsg
+                ]);
+                return redirect()->back()->with('error', $errorMsg);
             }
             $item->stueckzahl -= $qty;
             $msg = "{$qty}x '{$item->bezeichnung}' erfolgreich entnommen.";
         }
 
         $item->save();
+
+        SckWarehouseLog::create([
+            'user_id' => auth()->id(),
+            'item_id' => $item->id,
+            'success' => true,
+            'action' => $request->action,
+            'type' => 'quick',
+            'message' => $msg
+        ]);
 
         return redirect()->back()->with('success', $msg);
     }
@@ -183,7 +237,32 @@ class SckWarehouseController extends Controller
      */
     public function scanPage()
     {
-        return view('sck.warehouse.scan');
+        $logs = SckWarehouseLog::with('user')
+            ->orderBy('created_at', 'desc')
+            ->take(500)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'item_id' => $log->item_id,
+                    'success' => (bool)$log->success,
+                    'action' => $log->action,
+                    'type' => $log->type,
+                    'message' => $log->message,
+                    'time' => $log->created_at->timezone('Europe/Berlin')->format('d.m.Y H:i:s'),
+                ];
+            });
+
+        return view('sck.warehouse.scan', compact('logs'));
+    }
+
+    /**
+     * Clear all database activity logs.
+     */
+    public function clearLogs()
+    {
+        SckWarehouseLog::truncate();
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -200,9 +279,18 @@ class SckWarehouseController extends Controller
         $item = SckWarehouseItem::where('neue_artikelnummer', $request->barcode)->first();
 
         if (!$item) {
+            $msg = "Artikel mit Nummer '{$request->barcode}' wurde im System nicht gefunden.";
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => null,
+                'success' => false,
+                'action' => $request->action,
+                'type' => 'scanner',
+                'message' => $msg
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => "Artikel mit Nummer '{$request->barcode}' wurde im System nicht gefunden."
+                'message' => $msg
             ], 404);
         }
 
@@ -211,31 +299,58 @@ class SckWarehouseController extends Controller
         if ($request->action === 'add') {
             $item->stueckzahl += $qty;
             $item->save();
+            $msg = "✓ {$qty}x '{$item->bezeichnung}' erfolgreich eingebucht. Neuer Bestand: {$item->stueckzahl} Stk.";
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => 'add',
+                'type' => 'scanner',
+                'message' => $msg
+            ]);
             return response()->json([
                 'success' => true,
                 'item_name' => $item->bezeichnung,
                 'action_label' => 'eingebucht',
                 'quantity' => $qty,
                 'new_stock' => $item->stueckzahl,
-                'message' => "✓ {$qty}x '{$item->bezeichnung}' erfolgreich eingebucht. Neuer Bestand: {$item->stueckzahl} Stk."
+                'message' => $msg
             ]);
         } else {
             if ($item->stueckzahl < $qty) {
+                $msg = "✖ Fehler: Es können nicht {$qty}x '{$item->bezeichnung}' ausgebucht werden (Bestand: {$item->stueckzahl} Stk.).";
+                SckWarehouseLog::create([
+                    'user_id' => auth()->id(),
+                    'item_id' => $item->id,
+                    'success' => false,
+                    'action' => 'remove',
+                    'type' => 'scanner',
+                    'message' => $msg
+                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => "✖ Fehler: Es können nicht {$qty}x '{$item->bezeichnung}' ausgebucht werden (Bestand: {$item->stueckzahl} Stk.)."
+                    'message' => $msg
                 ], 400);
             }
 
             $item->stueckzahl -= $qty;
             $item->save();
+            $msg = "✓ {$qty}x '{$item->bezeichnung}' erfolgreich ausgebucht. Neuer Bestand: {$item->stueckzahl} Stk.";
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => 'remove',
+                'type' => 'scanner',
+                'message' => $msg
+            ]);
             return response()->json([
                 'success' => true,
                 'item_name' => $item->bezeichnung,
                 'action_label' => 'ausgebucht',
                 'quantity' => $qty,
                 'new_stock' => $item->stueckzahl,
-                'message' => "✓ {$qty}x '{$item->bezeichnung}' erfolgreich ausgebucht. Neuer Bestand: {$item->stueckzahl} Stk."
+                'message' => $msg
             ]);
         }
     }
@@ -251,7 +366,23 @@ class SckWarehouseController extends Controller
         $items = $query->paginate(15)->withQueryString();
         $categories = SckWarehouseItem::select('geraet')->distinct()->pluck('geraet');
 
-        return view('sck.warehouse.index', compact('items', 'categories', 'showItem'));
+        $logs = SckWarehouseLog::with('user')
+            ->orderBy('created_at', 'desc')
+            ->take(500)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'item_id' => $log->item_id,
+                    'success' => (bool)$log->success,
+                    'action' => $log->action,
+                    'type' => $log->type,
+                    'message' => $log->message,
+                    'time' => $log->created_at->timezone('Europe/Berlin')->format('d.m.Y H:i:s'),
+                ];
+            });
+
+        return view('sck.warehouse.index', compact('items', 'categories', 'showItem', 'logs'));
     }
 
     /**
@@ -283,7 +414,27 @@ class SckWarehouseController extends Controller
         }
 
         $item = SckWarehouseItem::findOrFail($request->id);
+        $oldStock = $item->stueckzahl;
+        $newStock = intval($validated['stueckzahl']);
+
         $item->update($validated);
+
+        if ($oldStock !== $newStock) {
+            $diff = $newStock - $oldStock;
+            $action = $diff > 0 ? 'add' : 'remove';
+            $diffAbs = abs($diff);
+            $actionLabel = $diff > 0 ? 'manuell erhöht' : 'manuell verringert';
+            $msg = "✓ Lagerbestand von '{$item->bezeichnung}' {$actionLabel} um {$diffAbs} Stk. Neuer Bestand: {$newStock} Stk.";
+
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => $action,
+                'type' => 'manual',
+                'message' => $msg
+            ]);
+        }
 
         return redirect()->route('sck.lager.index')->with('success', "Artikel '{$item->bezeichnung}' wurde erfolgreich aktualisiert.");
     }
@@ -318,11 +469,12 @@ class SckWarehouseController extends Controller
     }
 
     /**
+    /**
      * Export the product list as a DATEV-compatible CSV file.
      */
     public function exportDatev()
     {
-        $items = SckWarehouseItem::orderBy('bezeichnung', 'asc')->get();
+        $items = SckWarehouseItem::where('datev_exported', false)->orderBy('bezeichnung', 'asc')->get();
 
         $fileName = 'DATEV_Artikelimport_' . date('Y-m-d') . '.csv';
 
@@ -340,39 +492,245 @@ class SckWarehouseController extends Controller
             // Add UTF-8 BOM
             fwrite($file, "\xEF\xBB\xBF");
 
-            // CSV Header Row (exact DATEV Column names)
+            // CSV Header Row (exact columns matching CSV_Vorlage_Artikelimport_Nettopreise.csv)
             $columns = [
                 'Art.-Nr.',
                 'Bezeichnung',
-                'Einheit',
-                'Verkaufspreis (Netto)',
-                'Steuersatz',
+                'Zusätzliche Beschreibung',
                 'Artikelgruppe',
-                'Belegtext'
+                'Artikeltyp',
+                'Bezeichnung_Steuersatz',
+                'Nettopreis',
+                'Einheit_(Einzahl)',
+                'Einheit_(Mehrzahl)',
+                'Rabattfähig'
             ];
 
             fputcsv($file, $columns, ';');
 
             foreach ($items as $item) {
-                // Map steuersatz to DATEV percentage string format
-                $steuersatzStr = $item->steuersatz;
-                if ($steuersatzStr === '19') {
-                    $steuersatzStr = '19%';
-                } elseif ($steuersatzStr === '7') {
-                    $steuersatzStr = '7%';
-                } elseif ($steuersatzStr === '0') {
-                    $steuersatzStr = '0%';
+                // Map steuersatz to template name
+                $steuersatzStr = 'Volle Steuer';
+                if ($item->steuersatz === '7') {
+                    $steuersatzStr = 'Ermäßigte Steuer';
+                } elseif ($item->steuersatz === '0') {
+                    $steuersatzStr = 'Steuerfrei';
+                }
+
+                $einheitSingular = $item->einheit ?: 'Stück';
+                $einheitPlural = $einheitSingular . 'n';
+                if ($einheitSingular === 'Stück') {
+                    $einheitPlural = 'Stücke';
                 }
 
                 $row = [
                     $item->neue_artikelnummer,
                     $item->bezeichnung,
-                    $item->einheit ?: 'Stück',
-                    number_format((float)$item->vk_ohne_st, 2, ',', ''),
-                    $steuersatzStr,
-                    $item->artikelgruppe ?? '',
                     $item->kommentar ?? '',
+                    $item->artikelgruppe ?? '',
+                    'Ware',
+                    $steuersatzStr,
+                    number_format((float)$item->vk_ohne_st, 4, ',', ''),
+                    $einheitSingular,
+                    $einheitPlural,
+                    'ja'
                 ];
+
+                fputcsv($file, $row, ';');
+
+                // Mark as exported
+                $item->update(['datev_exported' => true]);
+            }
+
+            fclose($file);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
+    }
+
+    /**
+     * Store selected IDs in session for bulk actions.
+     */
+    public function storeBulkSelection(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        session(['sck_warehouse_selected_ids' => $ids]);
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Bulk delete selected warehouse items.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Keine Artikel zum Löschen ausgewählt.');
+        }
+
+        $count = SckWarehouseItem::whereIn('id', $ids)->delete();
+        session()->forget('sck_warehouse_selected_ids');
+
+        SckWarehouseLog::create([
+            'user_id' => auth()->id(),
+            'item_id' => null,
+            'success' => true,
+            'action' => 'delete',
+            'type' => 'manual',
+            'message' => "Massenlöschung: {$count} Artikel wurden aus dem Lagersystem gelöscht."
+        ]);
+
+        return redirect()->route('sck.lager.index')->with('success', "{$count} Artikel wurden erfolgreich gelöscht.");
+    }
+
+    /**
+     * AJAX endpoint to upload and parse a DATEV PDF invoice.
+     */
+    public function parseInvoice(Request $request, DatevInvoiceParserService $parser)
+    {
+        $request->validate([
+            'invoice_file' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        $file = $request->file('invoice_file');
+        $tempPath = $file->getRealPath();
+        $fileName = $file->getClientOriginalName();
+
+        Log::info("SckWarehouseController: Invoice parse requested", ['file' => $fileName]);
+
+        try {
+            $analysis = $parser->parsePdf($tempPath);
+
+            Log::info("SckWarehouseController: Invoice PDF successfully parsed", [
+                'file' => $fileName,
+                'detected_items' => count($analysis['items'] ?? []),
+                'invoice_info' => $analysis['invoice_info'] ?? [],
+            ]);
+
+            return response()->json($analysis);
+        } catch (\Throwable $e) {
+            Log::error("SckWarehouseController: Invoice PDF parsing failed", [
+                'file' => $fileName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler beim Analysieren der DATEV-Rechnung: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Process final inventory deduction from parsed invoice data.
+     */
+    public function processInvoiceDeduction(Request $request)
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:sck_warehouse_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.update_price' => 'nullable|boolean',
+            'items.*.new_price' => 'nullable|numeric|min:0',
+            'invoice_number' => 'nullable|string',
+        ]);
+
+        $invoiceNum = $request->input('invoice_number', 'ausstehend');
+        $deductedCount = 0;
+        $messages = [];
+
+        foreach ($request->input('items') as $entry) {
+            $item = SckWarehouseItem::findOrFail($entry['item_id']);
+            $qty = (int)$entry['quantity'];
+            $oldStock = $item->stueckzahl;
+            
+            // Deduct stock
+            $item->stueckzahl = max(0, $item->stueckzahl - $qty);
+
+            // Optional price update
+            if (!empty($entry['update_price']) && isset($entry['new_price'])) {
+                $item->ek_ohne_st = (float)$entry['new_price'];
+            }
+
+            $item->save();
+            $deductedCount++;
+
+            $logMsg = "✓ Rechnungsabzug (Rechnung #{$invoiceNum}): {$qty}x '{$item->bezeichnung}' entnommen (Bestand: {$oldStock} -> {$item->stueckzahl} Stk.)";
+            if (!empty($entry['update_price']) && isset($entry['new_price'])) {
+                $logMsg .= sprintf(" | EK-Preis angepasst auf %.2f €", (float)$entry['new_price']);
+            }
+
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => 'remove',
+                'type' => 'invoice',
+                'message' => $logMsg
+            ]);
+
+            $messages[] = "{$qty}x '{$item->bezeichnung}'";
+        }
+
+        $summary = "Rechnungsabzug erfolgreich durchgeführt: " . implode(', ', $messages) . " aus dem Bestand entnommen.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $summary
+            ]);
+        }
+
+        return redirect()->route('sck.lager.index')->with('success', $summary);
+    }
+
+    /**
+     * Bulk export selected items as CSV.
+     */
+    public function bulkExport(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        $includeStock = $request->input('include_stock', '1') === '1';
+
+        $query = SckWarehouseItem::orderBy('bezeichnung', 'asc');
+        if (!empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+        $items = $query->get();
+
+        $fileName = 'SCK_Auswahl_Export_' . ($includeStock ? 'mit_bestand_' : 'ohne_bestand_') . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function () use ($items, $includeStock) {
+            $file = fopen('php://output', 'w');
+            fwrite($file, "\xEF\xBB\xBF");
+
+            $columns = ['Bezeichnung', 'Gerät/Kategorie', 'Lieferant', 'EK ohne St. (€)', 'VK ohne St. (€)', 'Alte Artikelnummer', 'Neue Artikelnummer'];
+            if ($includeStock) $columns[] = 'Stückzahl';
+            $columns[] = 'Kommentar';
+
+            fputcsv($file, $columns, ';');
+
+            foreach ($items as $item) {
+                $row = [
+                    $item->bezeichnung,
+                    $item->geraet,
+                    $item->lieferant,
+                    number_format((float)$item->ek_ohne_st, 2, ',', ''),
+                    number_format((float)$item->vk_ohne_st, 2, ',', ''),
+                    $item->alte_artikelnummer ?? '',
+                    $item->neue_artikelnummer,
+                ];
+                if ($includeStock) $row[] = $item->stueckzahl;
+                $row[] = $item->kommentar ?? '';
 
                 fputcsv($file, $row, ';');
             }
@@ -382,4 +740,191 @@ class SckWarehouseController extends Controller
 
         return new StreamedResponse($callback, 200, $headers);
     }
+
+    /**
+    /**
+     * Bulk export selected items in DATEV CSV format.
+     */
+    public function bulkExportDatev(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        $query = SckWarehouseItem::where('datev_exported', false)->orderBy('bezeichnung', 'asc');
+        if (!empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+        $items = $query->get();
+
+        $fileName = 'DATEV_Auswahl_Export_' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function () use ($items) {
+            $file = fopen('php://output', 'w');
+            fwrite($file, "\xEF\xBB\xBF");
+
+            // CSV Header Row (exact columns matching CSV_Vorlage_Artikelimport_Nettopreise.csv)
+            $columns = [
+                'Art.-Nr.',
+                'Bezeichnung',
+                'Zusätzliche Beschreibung',
+                'Artikelgruppe',
+                'Artikeltyp',
+                'Bezeichnung_Steuersatz',
+                'Nettopreis',
+                'Einheit_(Einzahl)',
+                'Einheit_(Mehrzahl)',
+                'Rabattfähig'
+            ];
+
+            fputcsv($file, $columns, ';');
+
+            foreach ($items as $item) {
+                $steuersatzStr = 'Volle Steuer';
+                if ($item->steuersatz === '7') {
+                    $steuersatzStr = 'Ermäßigte Steuer';
+                } elseif ($item->steuersatz === '0') {
+                    $steuersatzStr = 'Steuerfrei';
+                }
+
+                $einheitSingular = $item->einheit ?: 'Stück';
+                $einheitPlural = $einheitSingular . 'n';
+                if ($einheitSingular === 'Stück') {
+                    $einheitPlural = 'Stücke';
+                }
+
+                $row = [
+                    $item->neue_artikelnummer,
+                    $item->bezeichnung,
+                    $item->kommentar ?? '',
+                    $item->artikelgruppe ?? '',
+                    'Ware',
+                    $steuersatzStr,
+                    number_format((float)$item->vk_ohne_st, 4, ',', ''),
+                    $einheitSingular,
+                    $einheitPlural,
+                    'ja'
+                ];
+
+                fputcsv($file, $row, ';');
+
+                // Mark as exported
+                $item->update(['datev_exported' => true]);
+            }
+
+            fclose($file);
+        };
+
+        return new StreamedResponse($callback, 200, $headers);
+    }
+
+    /**
+     * Toggle the DATEV export status for a single item.
+     */
+    public function toggleDatevExported($id)
+    {
+        $item = SckWarehouseItem::findOrFail($id);
+        $item->datev_exported = !$item->datev_exported;
+        $item->save();
+
+        $statusStr = $item->datev_exported ? 'als exportiert markiert' : 'als nicht exportiert markiert';
+        
+        SckWarehouseLog::create([
+            'user_id' => auth()->id(),
+            'item_id' => $item->id,
+            'success' => true,
+            'action' => 'manual',
+            'type' => 'manual',
+            'message' => "Artikel '{$item->bezeichnung}' {$statusStr}."
+        ]);
+
+        return redirect()->back()->with('success', "Status für '{$item->bezeichnung}' erfolgreich geändert.");
+    }
+
+    /**
+     * Bulk toggle or set the DATEV export status for selected items.
+     */
+    public function bulkToggleDatevExported(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        $status = filter_var($request->input('status'), FILTER_VALIDATE_BOOLEAN);
+
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Keine Artikel ausgewählt.');
+        }
+
+        $items = SckWarehouseItem::whereIn('id', $ids)->get();
+        $count = $items->count();
+
+        foreach ($items as $item) {
+            $item->datev_exported = $status;
+            $item->save();
+
+            $statusStr = $status ? 'als exportiert markiert' : 'als nicht exportiert markiert';
+
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => 'manual',
+                'type' => 'manual',
+                'message' => "Massenaktion: '{$item->bezeichnung}' {$statusStr}."
+            ]);
+        }
+
+        $msg = $status 
+            ? "{$count} Artikel wurden erfolgreich als DATEV-exportiert markiert."
+            : "Export-Status von {$count} Artikeln wurde erfolgreich zurückgesetzt.";
+
+        return redirect()->route('sck.lager.index')->with('success', $msg);
+    }
+
+    /**
+     * Bulk update or reset stock for selected items.
+     */
+    public function bulkUpdateStock(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        $mode = $request->input('mode', 'set'); // 'set' or 'add'
+        $amount = (int)$request->input('amount', 0);
+
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Keine Artikel für die Bestandsänderung ausgewählt.');
+        }
+
+        $items = SckWarehouseItem::whereIn('id', $ids)->get();
+        $count = $items->count();
+
+        foreach ($items as $item) {
+            $oldStock = $item->stueckzahl;
+            if ($mode === 'set') {
+                $item->stueckzahl = max(0, $amount);
+            } else {
+                $item->stueckzahl = max(0, $item->stueckzahl + $amount);
+            }
+            $item->save();
+
+            SckWarehouseLog::create([
+                'user_id' => auth()->id(),
+                'item_id' => $item->id,
+                'success' => true,
+                'action' => $mode === 'set' ? 'manual' : ($amount >= 0 ? 'add' : 'remove'),
+                'type' => 'manual',
+                'message' => "Massen-Bestandsanpassung: '{$item->bezeichnung}' Bestand von {$oldStock} auf {$item->stueckzahl} Stk. geändert."
+            ]);
+        }
+
+        $msg = $mode === 'set' && $amount === 0 
+            ? "Lagerbestand von {$count} markierten Artikeln wurde auf 0 zurückgesetzt."
+            : "Lagerbestand von {$count} markierten Artikeln wurde erfolgreich angepasst.";
+
+        return redirect()->route('sck.lager.index')->with('success', $msg);
+    }
 }
+

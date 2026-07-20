@@ -1,0 +1,3 @@
+Art.-Nr.;Bezeichnung;Zusätzliche Beschreibung;Artikelgruppe;Artikeltyp;Bezeichnung_Steuersatz;Nettopreis;Einheit_(Einzahl);Einheit_(Mehrzahl);Rabattfähig
+Eindeutige Nummer des Musterartikels;Bezeichnung des Musterartikels;Hier können zusätzliche Informationen zum Musterartikel stehen.;Artikelgruppe des Musterartikels;Ware;Ermäßigte Steuer;999,9999;Tonne;Tonnen;ja
+Eindeutige Nummer der Musterleistung;Bezeichnung der Musterleistung;Hier können zusätzliche Informationen zur Musterleistung stehen.;Artikelgruppe der Musterleistung;Leistung;Volle Steuer;99,9999;Stunde;Stunden;nein

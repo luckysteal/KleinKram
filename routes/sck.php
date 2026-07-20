@@ -21,7 +21,22 @@ Route::middleware(['web', 'auth', 'sck'])->group(function () {
     // Scanner routes
     Route::get('/lager/scan', [SckWarehouseController::class, 'scanPage'])->name('sck.lager.scan');
     Route::post('/lager/scan/action', [SckWarehouseController::class, 'processScan'])->name('sck.lager.scan.action');
+    Route::post('/lager/scan/clear-logs', [SckWarehouseController::class, 'clearLogs'])->name('sck.lager.scan.clear_logs');
     
     // Article Detail Route (landing page for scanning outside the app)
     Route::get('/lager/artikel/{neue_artikelnummer}', [SckWarehouseController::class, 'show'])->name('sck.lager.artikel');
+
+    // Bulk actions
+    Route::post('/lager/bulk-selection', [SckWarehouseController::class, 'storeBulkSelection'])->name('sck.lager.bulk-selection');
+    Route::post('/lager/bulk-destroy', [SckWarehouseController::class, 'bulkDestroy'])->name('sck.lager.bulk-destroy');
+    Route::post('/lager/bulk-export', [SckWarehouseController::class, 'bulkExport'])->name('sck.lager.bulk-export');
+    Route::post('/lager/bulk-export-datev', [SckWarehouseController::class, 'bulkExportDatev'])->name('sck.lager.bulk-export-datev');
+    Route::post('/lager/bulk-update-stock', [SckWarehouseController::class, 'bulkUpdateStock'])->name('sck.lager.bulk-update-stock');
+    Route::post('/lager/toggle-datev-exported/{id}', [SckWarehouseController::class, 'toggleDatevExported'])->name('sck.lager.toggle-datev-exported');
+    Route::post('/lager/bulk-toggle-datev-exported', [SckWarehouseController::class, 'bulkToggleDatevExported'])->name('sck.lager.bulk-toggle-datev-exported');
+    Route::post('/lager/toggle-datev-status-session', [SckWarehouseController::class, 'storeDatevStatusToggle'])->name('sck.lager.toggle-datev-status-session');
+
+    // Invoice upload & deduction
+    Route::post('/lager/parse-invoice', [SckWarehouseController::class, 'parseInvoice'])->name('sck.lager.parse-invoice');
+    Route::post('/lager/process-invoice-deduction', [SckWarehouseController::class, 'processInvoiceDeduction'])->name('sck.lager.process-invoice-deduction');
 });
