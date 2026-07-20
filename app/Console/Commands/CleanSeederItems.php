@@ -20,6 +20,8 @@ class CleanSeederItems extends Command
                             {--dry-run : Preview which items will be deleted without actually removing them} 
                             {--include-other : Also delete dummy records from Bar, Drink, and Page seeders}
                             {--detect-batches : Detect and clean ALL historical seeder batches using timestamp clustering}
+                            {--report : Show a summary of item counts grouped by creation date}
+                            {--created-on= : Delete all items created on a specific date (Format: YYYY-MM-DD)}
                             {--force : Force deletion without confirmation prompt}';
 
     /**
@@ -33,46 +35,19 @@ class CleanSeederItems extends Command
      * List of seeded warehouse item old article numbers and designations from the latest seeder.
      */
     protected array $seededArticleNumbers = [
-        'JU-BG-S9',
-        'JU-MW-V5',
-        'GM-DS-10',
-        'UL-EX5-230',
-        'DL-TB-1200',
-        'JP-AV-MS',
-        'GM-EK-1L',
-        'GM-RT-100',
-        'JU-DS-FEP',
-        'DL-SERV-KAFF',
-        'OL-MB-500',
-        'GR-BS-150',
-        'GR-BK-SCHW',
-        'OL-AK-ES',
-        'SH-HFS-W',
-        'GE-RSS-40',
-        'SD-SIL-SAN',
-        'OL-NK-SCHW',
-        'DL-SERV-WASCH',
+        'JU-BG-S9', 'JU-MW-V5', 'GM-DS-10', 'UL-EX5-230', 'DL-TB-1200',
+        'JP-AV-MS', 'GM-EK-1L', 'GM-RT-100', 'JU-DS-FEP', 'DL-SERV-KAFF',
+        'OL-MB-500', 'GR-BS-150', 'GR-BK-SCHW', 'OL-AK-ES', 'SH-HFS-W',
+        'GE-RSS-40', 'SD-SIL-SAN', 'OL-NK-SCHW', 'DL-SERV-WASCH',
     ];
 
     protected array $seededBezeichnungen = [
-        'Brühgruppe komplett',
-        'Mahlwerk V5 mit Motor',
-        'Dichtungssatz Premium O-Ringe (10er Set)',
-        'Vibrationspumpe EX 5 230V 48W',
-        'Thermoblock Erhitzer 230V 1200W',
-        'Auslaufventil Messing Upgrade',
-        'Flüssigentkalker Premium 1L',
-        'Reinigungstabletten 2g (100er Dose)',
-        'Druckschlauch FEP 4x2mm (5m Rolle)',
-        'Servicepauschale Kaffeevollautomat',
-        'Einhebel-Mischbatterie Friseurbecken',
-        'Friseur-Brauseschlauch 150cm schwarz',
-        'Profi-Brausekopf schwarz mit Sparventil',
-        'Ablaufkelch mit Haarsieb Edelstahl',
-        'Haarfangsieb Kunststoff weiß',
-        'Flexibler Raumsparsifon Ø40mm',
-        'Sanitär-Silikon Transparent 310ml',
-        'Nackenkissen Gummi schwarz',
+        'Brühgruppe komplett', 'Mahlwerk V5 mit Motor', 'Dichtungssatz Premium O-Ringe (10er Set)',
+        'Vibrationspumpe EX 5 230V 48W', 'Thermoblock Erhitzer 230V 1200W', 'Auslaufventil Messing Upgrade',
+        'Flüssigentkalker Premium 1L', 'Reinigungstabletten 2g (100er Dose)', 'Druckschlauch FEP 4x2mm (5m Rolle)',
+        'Servicepauschale Kaffeevollautomat', 'Einhebel-Mischbatterie Friseurbecken', 'Friseur-Brauseschlauch 150cm schwarz',
+        'Profi-Brausekopf schwarz mit Sparventil', 'Ablaufkelch mit Haarsieb Edelstahl', 'Haarfangsieb Kunststoff weiß',
+        'Flexibler Raumsparsifon Ø40mm', 'Sanitär-Silikon Transparent 310ml', 'Nackenkissen Gummi schwarz',
         'Servicepauschale Friseursalon Montage',
     ];
 
@@ -85,21 +60,57 @@ class CleanSeederItems extends Command
         $force = $this->option('force');
         $includeOther = $this->option('include-other');
         $detectBatches = $this->option('detect-batches');
+        $report = $this->option('report');
+        $createdOn = $this->option('created-on');
+
+        // 1. Generate report of creation dates
+        if ($report) {
+            $this->info("=== Database Item Count by Creation Date ===");
+            $isMysql = DB::connection()->getDriverName() === 'mysql';
+            $dateField = $isMysql ? 'DATE(created_at)' : 'strftime("%Y-%m-%d", created_at)';
+
+            $distribution = SckWarehouseItem::select(DB::raw("$dateField as date_group"), DB::raw('count(*) as count'))
+                ->groupBy('date_group')
+                ->orderBy('date_group', 'desc')
+                ->get();
+
+            if ($distribution->isEmpty()) {
+                $this->warn("No items found in the warehouse table.");
+                return 0;
+            }
+
+            foreach ($distribution as $row) {
+                $this->line(" Date: <fg=cyan>{$row->date_group}</> | Total Items Created: <fg=yellow>{$row->count}</>");
+            }
+
+            $this->line("\nTip: Run with <fg=green>--created-on=YYYY-MM-DD</> to purge all items created on that date.");
+            return 0;
+        }
 
         $warehouseItems = collect();
 
-        if ($detectBatches) {
+        // 2. Query items based on selected mode
+        if ($createdOn) {
+            $this->info("Targeting all items created on date: {$createdOn}");
+            
+            $isMysql = DB::connection()->getDriverName() === 'mysql';
+            if ($isMysql) {
+                $warehouseItems = SckWarehouseItem::whereRaw('DATE(created_at) = ?', [$createdOn])->get();
+            } else {
+                $warehouseItems = SckWarehouseItem::whereRaw('strftime("%Y-%m-%d", created_at) = ?', [$createdOn])->get();
+            }
+        } elseif ($detectBatches) {
             $this->info("Scanning database for seeder batches via timestamp clustering...");
 
-            // Find timestamps where 5 or more items were created in the exact same second
+            // Find timestamps where 2 or more items were created in the exact same second
             $batches = SckWarehouseItem::select('created_at', DB::raw('count(*) as count'))
                 ->groupBy('created_at')
-                ->having('count', '>=', 5)
+                ->having('count', '>=', 2)
                 ->orderBy('created_at', 'asc')
                 ->get();
 
             if ($batches->isEmpty()) {
-                $this->info("No bulk-created batches (5+ items in the same second) were detected.");
+                $this->info("No bulk-created batches (2+ items in the same second) were detected.");
             } else {
                 $this->info("Detected " . $batches->count() . " batch(es):");
                 foreach ($batches as $batch) {
