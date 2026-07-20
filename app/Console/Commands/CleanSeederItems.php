@@ -7,6 +7,7 @@ use App\Models\Bar;
 use App\Models\Drink;
 use App\Models\Page;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class CleanSeederItems extends Command
 {
@@ -18,6 +19,7 @@ class CleanSeederItems extends Command
     protected $signature = 'db:clean-seeder-items 
                             {--dry-run : Preview which items will be deleted without actually removing them} 
                             {--include-other : Also delete dummy records from Bar, Drink, and Page seeders}
+                            {--detect-batches : Detect and clean ALL historical seeder batches using timestamp clustering}
                             {--force : Force deletion without confirmation prompt}';
 
     /**
@@ -28,7 +30,7 @@ class CleanSeederItems extends Command
     protected $description = 'Safely drop seeded dummy items from the database without touching user-created data.';
 
     /**
-     * List of seeded warehouse item old article numbers and designations.
+     * List of seeded warehouse item old article numbers and designations from the latest seeder.
      */
     protected array $seededArticleNumbers = [
         'JU-BG-S9',
@@ -82,13 +84,43 @@ class CleanSeederItems extends Command
         $isDryRun = $this->option('dry-run');
         $force = $this->option('force');
         $includeOther = $this->option('include-other');
+        $detectBatches = $this->option('detect-batches');
 
-        // Find warehouse seeder items
-        $warehouseItems = SckWarehouseItem::whereIn('alte_artikelnummer', $this->seededArticleNumbers)
-            ->orWhereIn('bezeichnung', $this->seededBezeichnungen)
-            ->get();
+        $warehouseItems = collect();
 
-        $this->info("Found {$warehouseItems->count()} SCK Warehouse seeder item(s).");
+        if ($detectBatches) {
+            $this->info("Scanning database for seeder batches via timestamp clustering...");
+
+            // Find timestamps where 5 or more items were created in the exact same second
+            $batches = SckWarehouseItem::select('created_at', DB::raw('count(*) as count'))
+                ->groupBy('created_at')
+                ->having('count', '>=', 5)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            if ($batches->isEmpty()) {
+                $this->info("No bulk-created batches (5+ items in the same second) were detected.");
+            } else {
+                $this->info("Detected " . $batches->count() . " batch(es):");
+                foreach ($batches as $batch) {
+                    $this->line(" - Timestamp: <fg=cyan>{$batch->created_at}</> | Count: <fg=yellow>{$batch->count} items</>");
+                    
+                    // Fetch items in this batch
+                    $itemsInBatch = SckWarehouseItem::where('created_at', $batch->created_at)->get();
+                    $warehouseItems = $warehouseItems->merge($itemsInBatch);
+                }
+            }
+        } else {
+            // Default: Match by known seeder signatures
+            $warehouseItems = SckWarehouseItem::whereIn('alte_artikelnummer', $this->seededArticleNumbers)
+                ->orWhereIn('bezeichnung', $this->seededBezeichnungen)
+                ->get();
+        }
+
+        // De-duplicate if items were matched by both
+        $warehouseItems = $warehouseItems->unique('id');
+
+        $this->info("Found {$warehouseItems->count()} SCK Warehouse seeder item(s) in total.");
 
         if ($warehouseItems->isNotEmpty()) {
             $tableData = $warehouseItems->map(fn($item) => [
@@ -96,10 +128,10 @@ class CleanSeederItems extends Command
                 'Bezeichnung' => $item->bezeichnung,
                 'Alte Art.-Nr.' => $item->alte_artikelnummer ?? '-',
                 'Neue Art.-Nr.' => $item->neue_artikelnummer,
-                'Stückzahl' => $item->stueckzahl,
+                'Created At' => $item->created_at,
             ])->toArray();
 
-            $this->table(['ID', 'Bezeichnung', 'Alte Art.-Nr.', 'Neue Art.-Nr.', 'Stückzahl'], $tableData);
+            $this->table(['ID', 'Bezeichnung', 'Alte Art.-Nr.', 'Neue Art.-Nr.', 'Created At'], $tableData);
         }
 
         if ($includeOther) {
