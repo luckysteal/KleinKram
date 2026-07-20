@@ -37,6 +37,15 @@ class SckWarehouseItem extends Model
         'datev_exported' => 'boolean',
     ];
 
+    protected $appends = [
+        'is_dienstleistung',
+    ];
+
+    public function getIsDienstleistungAttribute(): bool
+    {
+        return strcasecmp($this->artikelgruppe ?? '', 'Dienstleistung') === 0;
+    }
+
     protected static function boot()
     {
         parent::boot();
