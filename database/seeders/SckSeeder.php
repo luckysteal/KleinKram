@@ -154,7 +154,7 @@ class SckSeeder extends Seeder
                 'ek_ohne_st' => 0.00,
                 'vk_ohne_st' => 75.00,
                 'alte_artikelnummer' => 'DL-SERV-KAFF',
-                'stueckzahl' => 999,
+                'stueckzahl' => 0,
                 'kommentar' => 'Diagnose, Reinigung, Entkalkung und Dichtungswechsel.'
             ],
 
@@ -273,9 +273,115 @@ class SckSeeder extends Seeder
                 'ek_ohne_st' => 0.00,
                 'vk_ohne_st' => 85.00,
                 'alte_artikelnummer' => 'DL-SERV-WASCH',
-                'stueckzahl' => 999,
+                'stueckzahl' => 0,
                 'kommentar' => 'Montage und installation der Sanitäranschlüsse.'
-            ]
+            ],
+
+            // ── Dienstleistungen ──────────────────────────────────────────────────────────────────
+            [
+                'bezeichnung' => 'Diagnose & Fehlersuche',
+                'geraet' => 'Universal',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Stunde',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 65.00,
+                'alte_artikelnummer' => 'DL-DIAG',
+                'stueckzahl' => 0,
+                'kommentar' => 'Technische Fehlerdiagnose für Kaffeemaschinen und Sanitäranlagen.'
+            ],
+            [
+                'bezeichnung' => 'Entkalkung & Grundreinigung',
+                'geraet' => 'Universal Kaffeevollautomat',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Stunde',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 55.00,
+                'alte_artikelnummer' => 'DL-ENT-KAFFEE',
+                'stueckzahl' => 0,
+                'kommentar' => 'Professionelle Entkalkung inkl. Systemspülung und Funktionstest.'
+            ],
+            [
+                'bezeichnung' => 'Brühgruppen-Überholung',
+                'geraet' => 'Jura / DeLonghi',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Pauschale',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 120.00,
+                'alte_artikelnummer' => 'DL-BG-UEBER',
+                'stueckzahl' => 0,
+                'kommentar' => 'Komplette Demontage, Reinigung, Dichtungswechsel und Justierung der Brühgruppe.'
+            ],
+            [
+                'bezeichnung' => 'Mahlwerk-Einstellung & Kalibrierung',
+                'geraet' => 'Universal Kaffeevollautomat',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Pauschale',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 45.00,
+                'alte_artikelnummer' => 'DL-MW-KAL',
+                'stueckzahl' => 0,
+                'kommentar' => 'Mahlgradseinstellung und Kaffeepulvermenge nach Kundenwunsch.'
+            ],
+            [
+                'bezeichnung' => 'Anfahrtspauschale (bis 20 km)',
+                'geraet' => 'Universal',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Pauschale',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 25.00,
+                'alte_artikelnummer' => 'DL-ANFAHRT-20',
+                'stueckzahl' => 0,
+                'kommentar' => 'Anfahrtskosten für Vor-Ort-Einsätze bis 20 km Radius.'
+            ],
+            [
+                'bezeichnung' => 'Anfahrtspauschale (21–50 km)',
+                'geraet' => 'Universal',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Pauschale',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 45.00,
+                'alte_artikelnummer' => 'DL-ANFAHRT-50',
+                'stueckzahl' => 0,
+                'kommentar' => 'Anfahrtskosten für Vor-Ort-Einsätze von 21 bis 50 km Radius.'
+            ],
+            [
+                'bezeichnung' => 'Sanitär-Rohrinspektion & Spülung',
+                'geraet' => 'Friseurwaschbecken',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Pauschale',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 95.00,
+                'alte_artikelnummer' => 'DL-ROHR-INSPEKTION',
+                'stueckzahl' => 0,
+                'kommentar' => 'Inspektion und Druckspülung der Zu- und Ablaufleitungen am Friseurbecken.'
+            ],
+            [
+                'bezeichnung' => 'Inbetriebnahme & Einweisung',
+                'geraet' => 'Universal',
+                'artikelgruppe' => 'Dienstleistung',
+                'einheit' => 'Stunde',
+                'steuersatz' => '19',
+                'lieferant' => 'Eigenleistung',
+                'ek_ohne_st' => 0.00,
+                'vk_ohne_st' => 60.00,
+                'alte_artikelnummer' => 'DL-IBN',
+                'stueckzahl' => 0,
+                'kommentar' => 'Erstinbetriebnahme von Geräten und Einweisung des Kundenpersonals.'
+            ],
         ];
 
         foreach ($items as $item) {

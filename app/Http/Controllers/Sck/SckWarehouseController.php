@@ -109,6 +109,10 @@ class SckWarehouseController extends Controller
             $validated['steuersatz'] = '19';
         }
 
+        if (isset($validated['artikelgruppe']) && strcasecmp($validated['artikelgruppe'], 'Dienstleistung') === 0) {
+            $validated['stueckzahl'] = 0;
+        }
+
         // If no custom number was provided, the model's boot() will auto-generate one
         $item = SckWarehouseItem::create($validated);
 
@@ -127,6 +131,9 @@ class SckWarehouseController extends Controller
         ]);
 
         $item = SckWarehouseItem::findOrFail($request->item_id);
+        if ($item->is_dienstleistung) {
+            return redirect()->back()->with('error', 'Fehler: Für Dienstleistungen kann kein Bestand gepflegt werden.');
+        }
         $qty = intval($request->quantity);
 
         if ($request->action === 'add') {
@@ -294,6 +301,14 @@ class SckWarehouseController extends Controller
             ], 404);
         }
 
+        if ($item->is_dienstleistung) {
+            $msg = "✖ Fehler: Für Dienstleistungen ('{$item->bezeichnung}') kann kein Bestand gebucht werden.";
+            return response()->json([
+                'success' => false,
+                'message' => $msg
+            ], 400);
+        }
+
         $qty = intval($request->quantity);
 
         if ($request->action === 'add') {
@@ -413,13 +428,17 @@ class SckWarehouseController extends Controller
             $validated['steuersatz'] = '19';
         }
 
+        if (isset($validated['artikelgruppe']) && strcasecmp($validated['artikelgruppe'], 'Dienstleistung') === 0) {
+            $validated['stueckzahl'] = 0;
+        }
+
         $item = SckWarehouseItem::findOrFail($request->id);
         $oldStock = $item->stueckzahl;
         $newStock = intval($validated['stueckzahl']);
 
         $item->update($validated);
 
-        if ($oldStock !== $newStock) {
+        if ($oldStock !== $newStock && !$item->is_dienstleistung) {
             $diff = $newStock - $oldStock;
             $action = $diff > 0 ? 'add' : 'remove';
             $diffAbs = abs($diff);
@@ -646,7 +665,11 @@ class SckWarehouseController extends Controller
             $oldStock = $item->stueckzahl;
             
             // Deduct stock
-            $item->stueckzahl = max(0, $item->stueckzahl - $qty);
+            if ($item->is_dienstleistung) {
+                $item->stueckzahl = 0;
+            } else {
+                $item->stueckzahl = max(0, $item->stueckzahl - $qty);
+            }
 
             // Optional price update
             if (!empty($entry['update_price']) && isset($entry['new_price'])) {
@@ -656,7 +679,11 @@ class SckWarehouseController extends Controller
             $item->save();
             $deductedCount++;
 
-            $logMsg = "✓ Rechnungsabzug (Rechnung #{$invoiceNum}): {$qty}x '{$item->bezeichnung}' entnommen (Bestand: {$oldStock} -> {$item->stueckzahl} Stk.)";
+            if ($item->is_dienstleistung) {
+                $logMsg = "✓ Rechnungsabzug (Rechnung #{$invoiceNum}): {$qty}x '{$item->bezeichnung}' (Dienstleistung - kein Bestandsabzug erforderlich)";
+            } else {
+                $logMsg = "✓ Rechnungsabzug (Rechnung #{$invoiceNum}): {$qty}x '{$item->bezeichnung}' entnommen (Bestand: {$oldStock} -> {$item->stueckzahl} Stk.)";
+            }
             if (!empty($entry['update_price']) && isset($entry['new_price'])) {
                 $logMsg .= sprintf(" | EK-Preis angepasst auf %.2f €", (float)$entry['new_price']);
             }

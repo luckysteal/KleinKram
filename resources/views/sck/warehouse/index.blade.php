@@ -152,6 +152,7 @@
                         });
                     },
                     addArtikelNr: '',
+                    addIsDienstleistung: false,
                     addArtikelNrLoading: false,
                     addArtikelNrError: '',
                     editArtikelNrError: '',
@@ -282,6 +283,13 @@
                         document.getElementById('vk_ohne_st').value = item.vk_ohne_st;
                         document.getElementById('alte_artikelnummer').value = item.alte_artikelnummer || '';
                         document.getElementById('kommentar').value = item.kommentar || '';
+                        this.addIsDienstleistung = (item.artikelgruppe === 'Dienstleistung');
+                        this.$nextTick(() => {
+                            const artGrp = document.getElementById('artikelgruppe');
+                            if (artGrp) artGrp.value = item.artikelgruppe || '';
+                            const stueck = document.getElementById('stueckzahl');
+                            if (stueck) stueck.value = item.stueckzahl || 0;
+                        });
                         this.tplQuery = '';
                         this.tplResults = [];
                     },
@@ -428,6 +436,9 @@
                 const id = row.dataset.id;
                 const bezeichnung = row.dataset.bezeichnung;
                 const geraet = row.dataset.geraet;
+                const artikelgruppe = row.dataset.artikelgruppe ?? '';
+                const einheit = row.dataset.einheit ?? 'Stück';
+                const steuersatz = row.dataset.steuersatz ?? '19';
                 const lieferant = row.dataset.lieferant;
                 const ek = row.dataset.ek;
                 const vk = row.dataset.vk;
@@ -439,7 +450,7 @@
 
                 const alpineData = Alpine.$data(document.querySelector('[x-data]'));
                 alpineData.selectedItem = {
-                    id, bezeichnung, geraet, lieferant,
+                    id, bezeichnung, geraet, artikelgruppe, einheit, steuersatz, lieferant,
                     ek_ohne_st: ek, vk_ohne_st: vk,
                     alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
                     stueckzahl, kommentar, datev_exported: datevExported
@@ -899,7 +910,7 @@
         <div class="glass-panel p-4 rounded-xl border border-gray-800 flex items-center justify-between">
             <div>
                 <p class="text-xs font-semibold text-gray-500 uppercase">Geringer Bestand</p>
-                <h4 class="text-xl font-bold mt-1 text-amber-400">{{ \App\Models\Sck\SckWarehouseItem::where('stueckzahl', '<', 5)->count() }}</h4>
+                <h4 class="text-xl font-bold mt-1 text-amber-400">{{ \App\Models\Sck\SckWarehouseItem::where('stueckzahl', '<', 5)->where('artikelgruppe', '!=', 'Dienstleistung')->count() }}</h4>
             </div>
             <div class="text-amber-400"><i class="fa-solid fa-circle-exclamation text-xl"></i></div>
         </div>
@@ -1102,30 +1113,39 @@
                                 </div>
                             </td>
                             <td class="py-3 px-4">
-                                <div class="flex items-center justify-center">
-                                    <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="flex items-center space-x-1.5 bg-gray-900/60 p-1 rounded-lg border border-gray-800">
-                                        @csrf
-                                        <input type="hidden" name="item_id" value="{{ $item->id }}">
+                                @if($item->is_dienstleistung)
+                                    <div class="flex items-center justify-center">
+                                        <span class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-violet-400 bg-violet-100 text-violet-700 dark:border-violet-500/30 dark:bg-violet-950/30 dark:text-violet-300 text-xs font-semibold">
+                                            <i class="fa-solid fa-briefcase text-[10px]"></i>
+                                            <span>Dienstleistung</span>
+                                        </span>
+                                    </div>
+                                @else
+                                    <div class="flex items-center justify-center">
+                                        <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="flex items-center space-x-1.5 bg-gray-900/60 p-1 rounded-lg border border-gray-800">
+                                            @csrf
+                                            <input type="hidden" name="item_id" value="{{ $item->id }}">
+                                            
+                                            <!-- Decrement button -->
+                                            <button type="submit" name="action" value="remove" class="w-6 h-6 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs">
+                                                -
+                                            </button>
+                                            
+                                            <!-- Editable quantity input -->
+                                            <input type="number" name="quantity" value="1" min="1" class="sck-input w-9 text-center text-xs py-0.5 px-0 rounded border-0 bg-transparent text-gray-200 font-bold font-mono">
+                                            
+                                            <!-- Increment button -->
+                                            <button type="submit" name="action" value="add" class="w-6 h-6 rounded bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs">
+                                                +
+                                            </button>
+                                        </form>
                                         
-                                        <!-- Decrement button -->
-                                        <button type="submit" name="action" value="remove" class="w-6 h-6 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs">
-                                            -
-                                        </button>
-                                        
-                                        <!-- Editable quantity input -->
-                                        <input type="number" name="quantity" value="1" min="1" class="sck-input w-9 text-center text-xs py-0.5 px-0 rounded border-0 bg-transparent text-gray-200 font-bold font-mono">
-                                        
-                                        <!-- Increment button -->
-                                        <button type="submit" name="action" value="add" class="w-6 h-6 rounded bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs">
-                                            +
-                                        </button>
-                                    </form>
-                                    
-                                    <!-- Stock label -->
-                                    <span class="ml-3 font-mono font-bold w-12 text-left" :class="{{ $item->stueckzahl }} < 5 ? 'text-amber-400 font-black animate-pulse' : 'text-gray-200'">
-                                        {{ $item->stueckzahl }} Stk.
-                                    </span>
-                                </div>
+                                        <!-- Stock label -->
+                                        <span class="ml-3 font-mono font-bold w-12 text-left" :class="{{ $item->stueckzahl }} < 5 ? 'text-amber-400 font-black animate-pulse' : 'text-gray-200'">
+                                            {{ $item->stueckzahl }} Stk.
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-4 px-5 text-gray-500 text-xs italic max-w-xs truncate" title="{{ $item->kommentar }}">
                                 {{ $item->kommentar ?? '-' }}
@@ -1227,14 +1247,48 @@
                         <input type="text" name="lieferant" id="lieferant" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
 
-                    <div class="flex flex-col space-y-1">
+                    <!-- Dienstleistung Toggle -->
+                    <div class="flex flex-col space-y-1 sm:col-span-2">
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
+                            <span>Artikeltyp</span>
+                            <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
+                            <div class="tooltip-item">Ist dieser Artikel eine Dienstleistung? Dienstleistungen haben keinen Lagerbestand.</div>
+                        </label>
+                        <button type="button"
+                            @click="addIsDienstleistung = !addIsDienstleistung"
+                            :class="addIsDienstleistung ? 'border-violet-500 bg-violet-100 dark:border-violet-500/60 dark:bg-violet-950/30' : 'border-gray-300 bg-gray-100 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900/60 dark:hover:border-gray-600'"
+                            class="flex items-center justify-between w-full rounded-xl border px-4 py-3 transition-all duration-200 group mt-1">
+                            <div class="flex items-center space-x-3">
+                                <div :class="addIsDienstleistung ? 'bg-violet-200 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400' : 'bg-gray-200 text-gray-500 group-hover:text-gray-600 dark:bg-gray-800 dark:text-gray-500 dark:group-hover:text-gray-400'" class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                                    <i class="fa-solid fa-briefcase text-sm"></i>
+                                </div>
+                                <div class="text-left">
+                                    <span :class="addIsDienstleistung ? 'text-violet-700 dark:text-violet-300' : 'text-gray-700 dark:text-gray-300'" class="text-sm font-bold block transition-colors">Dienstleistung</span>
+                                    <span class="text-xs text-gray-500 block">Kein physischer Lagerbestand</span>
+                                </div>
+                            </div>
+                            <div :class="addIsDienstleistung ? 'bg-violet-500' : 'bg-gray-700'" class="relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0">
+                                <div :class="addIsDienstleistung ? 'translate-x-5' : 'translate-x-0.5'" class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"></div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Artikelgruppe (hidden when Dienstleistung) -->
+                    <div class="flex flex-col space-y-1" x-show="!addIsDienstleistung" x-transition>
                         <label for="artikelgruppe" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
                             <span>Artikelgruppe</span>
                             <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
-                            <div class="tooltip-item">DATEV Artikelgruppe (z. B. 'Ersatzteile Kaffee', 'Dienstleistung').</div>
+                            <div class="tooltip-item">DATEV Artikelgruppe (z. B. 'Ersatzteile Kaffee').</div>
                         </label>
                         <input type="text" name="artikelgruppe" id="artikelgruppe" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
+                    <!-- Hidden inputs when Dienstleistung is active -->
+                    <template x-if="addIsDienstleistung">
+                        <div>
+                            <input type="hidden" name="artikelgruppe" value="Dienstleistung">
+                            <input type="hidden" name="stueckzahl" value="0">
+                        </div>
+                    </template>
 
                     <div class="flex flex-col space-y-1">
                         <label for="einheit" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
@@ -1317,13 +1371,14 @@
                         <p x-show="addArtikelNrError" x-text="addArtikelNrError" class="text-red-400 text-xs mt-1" x-cloak></p>
                     </div>
 
-                    <div class="flex flex-col space-y-1">
+                    <!-- Anfangsbestand (hidden for services) -->
+                    <div class="flex flex-col space-y-1" x-show="!addIsDienstleistung" x-transition>
                         <label for="stueckzahl" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center space-x-1 has-tooltip">
                             <span>Anfangsbestand *</span>
                             <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
                             <div class="tooltip-item">Die anfänglich verfügbare Stückzahl, die sich im Lager befindet.</div>
                         </label>
-                        <input type="number" name="stueckzahl" id="stueckzahl" value="0" min="0" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                        <input type="number" name="stueckzahl" id="stueckzahl" value="0" min="0" :required="!addIsDienstleistung" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
 
                     <div class="flex flex-col space-y-1 sm:col-span-2">
@@ -1381,10 +1436,37 @@
                         <input type="text" name="lieferant" id="edit_lieferant" x-model="selectedItem.lieferant" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
 
-                    <div class="flex flex-col space-y-1">
+                    <!-- Dienstleistung Toggle (Edit) -->
+                    <div class="flex flex-col space-y-1 sm:col-span-2">
+                        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Artikeltyp</label>
+                        <button type="button"
+                            @click="selectedItem.artikelgruppe = (selectedItem.artikelgruppe === 'Dienstleistung') ? '' : 'Dienstleistung'"
+                            :class="selectedItem.artikelgruppe === 'Dienstleistung' ? 'border-violet-500 bg-violet-100 dark:border-violet-500/60 dark:bg-violet-950/30' : 'border-gray-300 bg-gray-100 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900/60 dark:hover:border-gray-600'"
+                            class="flex items-center justify-between w-full rounded-xl border px-4 py-3 transition-all duration-200 group mt-1">
+                            <div class="flex items-center space-x-3">
+                                <div :class="selectedItem.artikelgruppe === 'Dienstleistung' ? 'bg-violet-200 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400' : 'bg-gray-200 text-gray-500 group-hover:text-gray-600 dark:bg-gray-800 dark:text-gray-500 dark:group-hover:text-gray-400'" class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                                    <i class="fa-solid fa-briefcase text-sm"></i>
+                                </div>
+                                <div class="text-left">
+                                    <span :class="selectedItem.artikelgruppe === 'Dienstleistung' ? 'text-violet-700 dark:text-violet-300' : 'text-gray-700 dark:text-gray-300'" class="text-sm font-bold block transition-colors">Dienstleistung</span>
+                                    <span class="text-xs text-gray-500 block">Kein physischer Lagerbestand</span>
+                                </div>
+                            </div>
+                            <div :class="selectedItem.artikelgruppe === 'Dienstleistung' ? 'bg-violet-500' : 'bg-gray-700'" class="relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0">
+                                <div :class="selectedItem.artikelgruppe === 'Dienstleistung' ? 'translate-x-5' : 'translate-x-0.5'" class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"></div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Artikelgruppe text input (hidden when service) -->
+                    <div class="flex flex-col space-y-1" x-show="selectedItem.artikelgruppe !== 'Dienstleistung'" x-transition>
                         <label for="edit_artikelgruppe" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Artikelgruppe</label>
                         <input type="text" name="artikelgruppe" id="edit_artikelgruppe" x-model="selectedItem.artikelgruppe" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                     </div>
+                    <!-- Hidden artikelgruppe when service -->
+                    <template x-if="selectedItem.artikelgruppe === 'Dienstleistung'">
+                        <input type="hidden" name="artikelgruppe" value="Dienstleistung">
+                    </template>
 
                     <div class="flex flex-col space-y-1">
                         <label for="edit_einheit" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Einheit *</label>
@@ -1451,9 +1533,18 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col space-y-1">
+                    <!-- Bestand (hidden for services) -->
+                    <div class="flex flex-col space-y-1" x-show="selectedItem.artikelgruppe !== 'Dienstleistung'" x-transition>
                         <label for="edit_stueckzahl" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Bestand *</label>
-                        <input type="number" name="stueckzahl" id="edit_stueckzahl" x-model="selectedItem.stueckzahl" min="0" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                        <input type="number" name="stueckzahl" id="edit_stueckzahl" x-model="selectedItem.stueckzahl" min="0" :required="selectedItem.artikelgruppe !== 'Dienstleistung'" class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
+                    </div>
+                    <!-- Show service note instead of stock when Dienstleistung -->
+                    <div class="flex flex-col space-y-1" x-show="selectedItem.artikelgruppe === 'Dienstleistung'" x-transition>
+                        <input type="hidden" name="stueckzahl" value="0">
+                        <div class="mt-1 flex items-center space-x-2.5 rounded-xl border border-violet-400 bg-violet-100 dark:border-violet-500/30 dark:bg-violet-950/20 px-4 py-3">
+                            <i class="fa-solid fa-circle-info text-violet-600 dark:text-violet-400 text-sm flex-shrink-0"></i>
+                            <span class="text-sm text-violet-700 dark:text-violet-300 font-medium">Dienstleistung &mdash; kein Lagerbestand</span>
+                        </div>
                     </div>
 
                     <div class="flex flex-col space-y-1 sm:col-span-2">
@@ -1622,31 +1713,46 @@
 
                 <!-- Specifications list -->
                 <div class="space-y-3.5 text-sm">
-                    <!-- Current Stock + Integrated Quick Actions -->
-                    <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-850 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Lagerbestand</span>
-                            <div class="text-xl font-black font-mono mt-0.5 show-modal-stock-text" :class="selectedItem.stueckzahl < 5 ? 'text-amber-500' : ''">
-                                <span x-text="selectedItem.stueckzahl"></span> Stk.
+                    <!-- Current Stock / Service indicator -->
+                    <template x-if="selectedItem.artikelgruppe === 'Dienstleistung'">
+                        <div class="bg-violet-100 dark:bg-violet-950/30 p-4 rounded-xl border border-violet-400 dark:border-violet-500/30 flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-violet-200 dark:bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-briefcase text-violet-600 dark:text-violet-400"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider block">Dienstleistung</span>
+                                <span class="text-sm text-violet-800 dark:text-violet-200 font-semibold">Kein physischer Lagerbestand</span>
                             </div>
                         </div>
-                        
-                        <!-- Inline Quick Actions Form -->
-                        <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="flex items-center space-x-2 bg-gray-900/60 p-1 rounded-lg border border-gray-800 self-start sm:self-auto">
-                            @csrf
-                            <input type="hidden" name="item_id" :value="selectedItem.id">
+                    </template>
+
+                    <!-- Current Stock + Integrated Quick Actions (only for non-services) -->
+                    <template x-if="selectedItem.artikelgruppe !== 'Dienstleistung'">
+                        <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-850 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">Lagerbestand</span>
+                                <div class="text-xl font-black font-mono mt-0.5 show-modal-stock-text" :class="selectedItem.stueckzahl < 5 ? 'text-amber-500' : ''">
+                                    <span x-text="selectedItem.stueckzahl"></span> Stk.
+                                </div>
+                            </div>
                             
-                            <button type="submit" name="action" value="remove" class="w-7 h-7 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Entnehmen">
-                                <i class="fa-solid fa-minus"></i>
-                            </button>
-                            
-                            <input type="number" name="quantity" value="1" min="1" class="sck-input w-9 text-center text-xs py-0.5 px-0 rounded border-0 bg-transparent text-gray-200 font-bold font-mono focus:ring-0">
-                            
-                            <button type="submit" name="action" value="add" class="w-7 h-7 rounded bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Auffüllen">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
-                        </form>
-                    </div>
+                            <!-- Inline Quick Actions Form -->
+                            <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="flex items-center space-x-2 bg-gray-900/60 p-1 rounded-lg border border-gray-800 self-start sm:self-auto">
+                                @csrf
+                                <input type="hidden" name="item_id" :value="selectedItem.id">
+                                
+                                <button type="submit" name="action" value="remove" class="w-7 h-7 rounded bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Entnehmen">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                                
+                                <input type="number" name="quantity" value="1" min="1" class="sck-input w-9 text-center text-xs py-0.5 px-0 rounded border-0 bg-transparent text-gray-200 font-bold font-mono focus:ring-0">
+                                
+                                <button type="submit" name="action" value="add" class="w-7 h-7 rounded bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all font-bold text-xs" title="Auffüllen">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </template>
 
                     <!-- Details List -->
                     <div class="space-y-2 pt-1">
@@ -1654,7 +1760,7 @@
                             <span class="text-gray-400 font-medium">Lieferant</span>
                             <span class="show-modal-value font-semibold" x-text="selectedItem.lieferant"></span>
                         </div>
-                        <div class="flex justify-between py-1.5 border-b border-gray-850/40" x-show="selectedItem.artikelgruppe">
+                        <div class="flex justify-between py-1.5 border-b border-gray-850/40" x-show="selectedItem.artikelgruppe && selectedItem.artikelgruppe !== 'Dienstleistung'">
                             <span class="text-gray-400 font-medium">Artikelgruppe</span>
                             <span class="show-modal-value font-semibold" x-text="selectedItem.artikelgruppe"></span>
                         </div>
