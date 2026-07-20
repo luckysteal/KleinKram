@@ -24,6 +24,7 @@ class SckWarehouseItem extends Model
         'neue_artikelnummer',
         'stueckzahl',
         'kommentar',
+        'datev_exported',
     ];
 
     /**
@@ -33,6 +34,7 @@ class SckWarehouseItem extends Model
         'ek_ohne_st' => 'decimal:2',
         'vk_ohne_st' => 'decimal:2',
         'stueckzahl' => 'integer',
+        'datev_exported' => 'boolean',
     ];
 
     protected static function boot()

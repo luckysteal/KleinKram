@@ -35,8 +35,12 @@
                                   class="px-2 py-0.5 rounded font-black uppercase tracking-wider text-white text-[9px] cursor-pointer select-none hover:scale-105 active:scale-95 transition-all duration-150"
                                   :class="action === 'add' ? 'bg-emerald-600/80 border border-emerald-500/30' : 'bg-rose-600/80 border border-rose-500/30'"
                                   x-text="action === 'add' ? 'Auffüllen' : 'Entnahme'"></button>
-                            <button @click="handleQtyModeClick()" 
-                                  title="Mengenmodus wechseln (Doppelklick erhöht Menge)"
+                            <button @mousedown="pressStart($event)" 
+                                  @mouseup="pressEnd($event)"
+                                  @mouseleave="clearTimeout(pressTimer)"
+                                  @touchstart.passive="pressStart($event)"
+                                  @touchend="pressEnd($event)"
+                                  title="Gedrückt halten: Menge erhöhen | Klick: Modus wechseln"
                                   class="px-2 py-0.5 rounded font-black uppercase tracking-wider bg-cyan-600/80 border border-cyan-500/30 text-white text-[9px] cursor-pointer select-none hover:scale-105 active:scale-95 transition-all duration-150"
                                   x-text="qtyMode === 'auto' ? 'Auto (+1)' : 'Manuell (' + quantity + ')'"></button>
                         </div>
@@ -56,13 +60,17 @@
                          x-transition:enter-end="opacity-100 translate-y-0"
                          class="w-full max-w-md bg-gray-950/85 backdrop-blur-sm border border-gray-800 rounded-xl p-2.5 mb-4 flex items-center justify-between text-xs transition-all shadow-lg shadow-black/40"
                          x-cloak>
-                        <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Aktiver Modus (Klick zum Ändern):</span>
+                        <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Aktiver Modus (Menge erhöhen durch Halten):</span>
                         <div class="flex items-center space-x-2">
                             <button @click="action = (action === 'add') ? 'remove' : 'add'" 
                                   class="px-2 py-0.5 rounded font-black uppercase tracking-wider text-white text-[10px] shadow-sm cursor-pointer select-none hover:scale-105 active:scale-95 transition-all duration-150"
                                   :class="action === 'add' ? 'bg-emerald-600 shadow-emerald-500/10' : 'bg-rose-600 shadow-rose-500/10'"
                                   x-text="action === 'add' ? 'Auffüllen' : 'Entnahme'"></button>
-                            <button @click="handleQtyModeClick()" 
+                            <button @mousedown="pressStart($event)" 
+                                  @mouseup="pressEnd($event)"
+                                  @mouseleave="clearTimeout(pressTimer)"
+                                  @touchstart.passive="pressStart($event)"
+                                  @touchend="pressEnd($event)"
                                   class="px-2 py-0.5 rounded font-black uppercase tracking-wider bg-cyan-600 text-white text-[10px] shadow-sm shadow-cyan-500/10 cursor-pointer select-none hover:scale-105 active:scale-95 transition-all duration-150"
                                   x-text="qtyMode === 'auto' ? 'Auto (+1)' : 'Manuell (' + quantity + ')'"></button>
                         </div>
@@ -214,25 +222,31 @@
                         <i class="fa-solid fa-list-check text-cyan-400"></i>
                         <span>Aktivitätsprotokoll</span>
                     </h3>
-                    <button @click="clearLogs()" class="text-[10px] text-gray-500 hover:text-cyan-400 transition-colors uppercase font-bold tracking-wider">
-                        Leeren
-                    </button>
+                    <div class="flex items-center space-x-2 text-[10px] uppercase font-bold tracking-wider">
+                        <button @click="showHistoryModal = true" class="text-cyan-500 hover:text-cyan-400 transition-colors">
+                            Verlauf
+                        </button>
+                        <span class="text-gray-700 font-normal">|</span>
+                        <button @click="clearLogs()" class="text-gray-500 hover:text-cyan-400 transition-colors">
+                            Leeren
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Logs List container -->
                 <div class="flex-grow overflow-y-auto space-y-3 pr-1 text-left text-xs font-mono">
-                    <template x-for="(log, idx) in logs" :key="idx">
-                        <div class="p-3 rounded-lg border flex items-start space-x-2" 
-                             :class="log.success ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300' : 'bg-red-950/20 border-red-500/30 text-red-300'">
+                    <template x-for="(log, idx) in logs.slice(0, 30)" :key="idx">
+                        <div class="p-3 rounded-lg border flex items-start space-x-2 transition-colors duration-150" 
+                             :class="log.success ? 'log-item-success' : 'log-item-error'">
                             <div class="flex-shrink-0 mt-0.5">
                                 <i :class="log.success ? 'fa-solid fa-circle-check text-emerald-400' : 'fa-solid fa-triangle-exclamation text-red-400'"></i>
                             </div>
                             <div class="space-y-1 flex-grow">
                                 <div class="font-bold flex items-center justify-between text-[10px] text-gray-500">
                                     <span x-text="log.time"></span>
-                                    <span class="uppercase text-[9px]" :class="log.action === 'add' ? 'text-emerald-400' : 'text-red-400'" x-text="log.action === 'add' ? 'Einbuchung' : 'Entnahme'"></span>
+                                    <span class="uppercase text-[9px]" :class="log.action === 'add' ? 'text-emerald-400' : 'text-rose-400'" x-text="log.action === 'add' ? 'Einbuchung' : 'Entnahme'"></span>
                                 </div>
-                                <p class="leading-normal" x-text="log.message"></p>
+                                <p class="leading-normal font-sans" x-text="log.message"></p>
                             </div>
                         </div>
                     </template>
@@ -249,6 +263,131 @@
         </div>
 
     </div>
+
+    <!-- History Modal Overlay -->
+    <div x-show="showHistoryModal" 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         x-cloak>
+        <div class="glass-panel w-full max-w-4xl rounded-2xl border border-gray-800 bg-gray-900/95 flex flex-col max-h-[85vh] overflow-hidden shadow-2xl text-left"
+             @click.away="showHistoryModal = false">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/45">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i>
+                    <span>Dauerhaftes Aktivitätsprotokoll</span>
+                </h3>
+                <button @click="showHistoryModal = false" class="text-gray-500 hover:text-cyan-400 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content Filters -->
+            <div class="p-4 border-b border-gray-850 bg-gray-950/20 flex flex-col sm:flex-row items-center gap-4">
+                <!-- Search -->
+                <div class="relative w-full sm:max-w-xs">
+                    <input type="text" 
+                           x-model="historySearch" 
+                           @input="historyPage = 1"
+                           placeholder="Protokoll durchsuchen..." 
+                           class="sck-input pl-9 pr-4 py-2 text-xs rounded-xl w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-500 text-[10px]"></i>
+                </div>
+
+                <!-- Type of change Filter -->
+                <div class="w-full sm:w-auto flex items-center space-x-2">
+                    <label class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Kategorie:</label>
+                    <select x-model="historyTypeFilter" @change="historyPage = 1" class="sck-input text-xs py-1.5 px-3 rounded-xl">
+                        <option value="all">Alle</option>
+                        <option value="scanner">Scanner</option>
+                        <option value="manual">Manuell (Details)</option>
+                        <option value="quick">Schnelländerung</option>
+                    </select>
+                </div>
+
+                <!-- Specific Item Filter Indicator -->
+                <div x-show="historyItemFilter !== 'all'" class="flex items-center space-x-2 bg-cyan-950/40 text-cyan-400 border border-cyan-500/25 px-3 py-1.5 rounded-xl text-xs" x-cloak>
+                    <i class="fa-solid fa-filter"></i>
+                    <span>Gefiltert nach Artikel</span>
+                    <button @click="historyItemFilter = 'all'; historyPage = 1" class="text-cyan-300 hover:text-white transition-colors ml-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="flex-grow"></div>
+                <button @click="if(confirm('Möchtest du wirklich alle Protokolle dauerhaft löschen?')) { clearLogs(); showHistoryModal = false; }" 
+                        class="btn-danger-soft text-[9px] bg-red-950/40 text-red-400 border border-red-500/20 hover:bg-red-900/30 px-3.5 py-1.5 rounded-xl transition-all font-bold uppercase tracking-wider">
+                    Gesamten Verlauf leeren
+                </button>
+            </div>
+
+            <!-- Modal Table -->
+            <div class="flex-grow overflow-auto p-6">
+                <div class="glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-md">
+                    <table class="w-full text-xs text-left border-collapse history-table">
+                        <thead>
+                            <tr class="text-gray-500 font-bold uppercase tracking-wider text-[10px] text-left">
+                                <th class="pb-3 pt-3 px-3 w-36">Zeit</th>
+                                <th class="pb-3 pt-3 px-3 w-28">Herkunft</th>
+                                <th class="pb-3 pt-3 px-3 w-24">Aktion</th>
+                                <th class="pb-3 pt-3 px-3">Nachricht</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(log, idx) in paginatedLogs" :key="idx">
+                                <tr :class="log.success ? 'log-item-success border-l-4 border-emerald-500' : 'log-item-error border-l-4 border-red-500'" class="transition-colors duration-75">
+                                    <td class="py-3 px-3 font-semibold text-[10px] text-gray-400 font-mono" x-text="log.time"></td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2 py-0.5 rounded font-bold text-[8px] uppercase tracking-wider"
+                                              :class="log.type === 'scanner' ? 'badge-scanner bg-purple-900/60 text-purple-300 border border-purple-500/20' : (log.type === 'quick' ? 'badge-quick bg-cyan-900/60 text-cyan-300 border border-cyan-500/20' : 'badge-manual bg-gray-800 text-gray-300 border border-gray-700')"
+                                              x-text="log.type === 'scanner' ? 'Scanner' : (log.type === 'quick' ? 'Schnell' : 'Manuell')"></span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2 py-0.5 rounded font-black uppercase text-[8px] tracking-wider text-white" 
+                                              :class="log.action === 'add' ? 'bg-emerald-600' : 'bg-rose-600'"
+                                              x-text="log.action === 'add' ? 'Eingebucht' : 'Entnahme'"></span>
+                                    </td>
+                                    <td class="py-3 px-3 text-[11px] font-sans" x-text="log.message"></td>
+                                </tr>
+                            </template>
+                            
+                            <template x-if="filteredLogs.length === 0">
+                                <tr>
+                                    <td colspan="4" class="py-12 text-center text-gray-500 font-sans">
+                                        Keine passenden Protokolleinträge gefunden.
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal Footer (Pagination) -->
+            <div class="px-6 py-4 border-t border-gray-850 flex flex-col sm:flex-row items-center justify-between bg-gray-950/45 text-xs gap-3">
+                <span class="text-gray-500" x-text="`Eintrag ${(historyPage-1)*historyPerPage + 1} - ${Math.min(historyPage*historyPerPage, filteredLogs.length)} von ${filteredLogs.length}`"></span>
+                <div class="flex items-center space-x-1">
+                    <button @click="if(historyPage > 1) historyPage--" 
+                            :disabled="historyPage === 1"
+                            class="px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:border-gray-800 transition-colors">
+                        Zurück
+                    </button>
+                    <span class="px-3 text-gray-400 font-bold" x-text="`${historyPage} / ${totalPages}`"></span>
+                    <button @click="if(historyPage < totalPages) historyPage++" 
+                            :disabled="historyPage === totalPages"
+                            class="px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:border-gray-800 transition-colors">
+                        Weiter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- html5-qrcode scanner client-side dependency -->
@@ -261,7 +400,7 @@
             qtyMode: 'auto', // 'auto' or 'manual'
             quantity: 2,
             scanning: false,
-            logs: [],
+            logs: @json($logs),
             html5Qrcode: null,
             lastCode: '',
             lastTime: 0,
@@ -271,6 +410,44 @@
             lastQtyClickTime: 0,
             qtyClickTimeout: null,
             lastManualClickTime: 0,
+            
+            // Modal & Search States
+            showHistoryModal: false,
+            historySearch: '',
+            historyPage: 1,
+            historyPerPage: 10,
+            historyTypeFilter: 'all',
+            historyItemFilter: 'all',
+
+            // Long Press properties
+            pressTimer: null,
+            isLong: false,
+            touchActive: false,
+
+            get filteredLogs() {
+                let list = this.logs;
+                if (this.historyTypeFilter !== 'all') {
+                    list = list.filter(log => log.type === this.historyTypeFilter);
+                }
+                if (this.historyItemFilter !== 'all') {
+                    const itemId = parseInt(this.historyItemFilter);
+                    list = list.filter(log => log.item_id === itemId);
+                }
+                if (!this.historySearch.trim()) return list;
+                const q = this.historySearch.toLowerCase();
+                return list.filter(log => 
+                    log.message.toLowerCase().includes(q) || 
+                    log.action.toLowerCase().includes(q) ||
+                    log.time.toLowerCase().includes(q)
+                );
+            },
+            get paginatedLogs() {
+                const start = (this.historyPage - 1) * this.historyPerPage;
+                return this.filteredLogs.slice(start, start + this.historyPerPage);
+            },
+            get totalPages() {
+                return Math.ceil(this.filteredLogs.length / this.historyPerPage) || 1;
+            },
             
             init() {
                 // Initialize audio context early on user click (avoid autoplay block)
@@ -285,28 +462,40 @@
                 }
             },
 
-            handleQtyModeClick() {
-                const now = Date.now();
-                if (this.qtyMode === 'manual') {
-                    if (now - this.lastQtyClickTime < 300) {
-                        // Double click in manual mode: increment quantity
-                        if (this.qtyClickTimeout) clearTimeout(this.qtyClickTimeout);
+            pressStart(e) {
+                if (e.type === 'touchstart') {
+                    this.touchActive = true;
+                } else if (e.type === 'mousedown' && this.touchActive) {
+                    return;
+                }
+                
+                this.isLong = false;
+                this.pressTimer = setTimeout(() => {
+                    this.isLong = true;
+                    if (this.qtyMode === 'manual') {
                         this.quantity++;
-                        this.lastQtyClickTime = 0;
-                    } else {
-                        // First click in manual mode: wait to see if it's a double click or single click to toggle back to auto
-                        this.lastQtyClickTime = now;
-                        this.qtyClickTimeout = setTimeout(() => {
-                            this.qtyMode = 'auto';
-                        }, 250);
+                        this.vibrate('success');
                     }
-                } else {
-                    // Currently Auto: switch to Manual and initialize starting quantity to 2
-                    this.qtyMode = 'manual';
-                    if (this.quantity < 2) {
-                        this.quantity = 2;
+                }, 500);
+            },
+
+            pressEnd(e) {
+                if (e.type === 'touchend') {
+                    setTimeout(() => { this.touchActive = false; }, 300);
+                }
+                clearTimeout(this.pressTimer);
+                if (!this.isLong) {
+                    // Toggle qtyMode on single click
+                    if (this.qtyMode === 'auto') {
+                        this.qtyMode = 'manual';
+                        if (this.quantity < 2) {
+                            this.quantity = 2;
+                        }
+                    } else {
+                        this.qtyMode = 'auto';
                     }
                 }
+                this.isLong = false;
             },
 
             activateManual() {
@@ -558,7 +747,15 @@
             },
 
             addLog(success, message, action) {
-                const time = new Date().toLocaleTimeString('de-DE');
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const time = `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+
                 this.logs.unshift({
                     success,
                     message,
@@ -568,7 +765,15 @@
             },
 
             clearLogs() {
-                this.logs = [];
+                window.axios.post("{{ route('sck.lager.scan.clear_logs') }}")
+                .then(res => {
+                    if (res.data.success) {
+                        this.logs = [];
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to clear logs permanently: ", err);
+                });
             }
         };
     }

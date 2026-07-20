@@ -35,4 +35,8 @@ return [
         'url' => env('GERMAN_VERBS_API_URL', 'https://german-verbs-api.onrender.com/german-verbs-api'),
     ],
 
+    'ocr_space' => [
+        'api_key' => env('OCR_SPACE_API_KEY', 'K89317752788957'),
+    ],
+
 ];

@@ -1,113 +1,817 @@
 @extends('sck.layouts.sck')
 
 @section('content')
-<div class="space-y-6" x-data="{ 
-    openAddModal: false, 
-    openEditModal: false, 
-    openPrintModal: false,
-    openZoomModal: false,
-    openShowModal: {{ isset($showItem) ? 'true' : 'false' }},
-    wasOpenedFromShowModal: false,
-    addArtikelNr: '',
-    addArtikelNrLoading: false,
-    addArtikelNrError: '',
-    editArtikelNrError: '',
-    selectedItem: {
-        id: '{{ isset($showItem) ? $showItem->id : '' }}',
-        bezeichnung: '{{ isset($showItem) ? addslashes($showItem->bezeichnung) : '' }}',
-        geraet: '{{ isset($showItem) ? addslashes($showItem->geraet) : '' }}',
-        artikelgruppe: '{{ isset($showItem) ? addslashes($showItem->artikelgruppe ?? '') : '' }}',
-        einheit: '{{ isset($showItem) ? addslashes($showItem->einheit ?? 'Stück') : 'Stück' }}',
-        steuersatz: '{{ isset($showItem) ? $showItem->steuersatz ?? '19' : '19' }}',
-        lieferant: '{{ isset($showItem) ? addslashes($showItem->lieferant) : '' }}',
-        ek_ohne_st: '{{ isset($showItem) ? number_format($showItem->ek_ohne_st, 2, '.', '') : '' }}',
-        vk_ohne_st: '{{ isset($showItem) ? number_format($showItem->vk_ohne_st, 2, '.', '') : '' }}',
-        alte_artikelnummer: '{{ isset($showItem) ? $showItem->alte_artikelnummer : '' }}',
-        neue_artikelnummer: '{{ isset($showItem) ? $showItem->neue_artikelnummer : '' }}',
-        stueckzahl: {{ isset($showItem) ? $showItem->stueckzahl : 0 }},
-        kommentar: '{{ isset($showItem) ? addslashes($showItem->kommentar ?? '') : '' }}'
-    },
-    printSize: 'small',
-    printFields: {
-        geraet: true,
-        lieferant: true,
-        ek: false,
-        vk: false,
-        alte_nr: false,
-        neue_nr: true,
-        kommentar: false
-    },
-    tplQuery: '',
-    tplResults: [],
-    tplLoading: false,
-    init() {
-        if (this.openShowModal) {
-            this.$nextTick(() => {
-                renderDetailQR();
-            });
+<x-multi-select.state-script />
+
+<script>
+        window.warehouseInitialData = {
+            showItem: @json($showItem ?? null),
+            logs: @json($logs)
+        };
+
+        window.warehouseManager = function() {
+                const initData = window.warehouseInitialData || { showItem: null, logs: [] };
+                const showItem = initData.showItem;
+                
+                return {
+                    openAddModal: false, 
+                    openEditModal: false, 
+                    openPrintModal: false,
+                    openZoomModal: false,
+                    openShowModal: showItem ? true : false,
+                    wasOpenedFromShowModal: false,
+
+                    // Invoice state & methods
+                    openInvoiceModal: false,
+                    invoiceStep: 'upload', // 'upload', 'loading', 'review'
+                    invoiceFileName: '',
+                    invoiceError: null,
+                    invoiceData: null,
+                    isSubmittingInvoiceDeduction: false,
+                    showInvoiceDebug: false,
+                    invoiceDebugTab: 'logs', // 'logs' or 'rawtext'
+
+                    prefillAddModalFromInvoiceItem(item) {
+                        this.addArtikelNr = item.invoice_artikelnummer && /^\d{5}$/.test(item.invoice_artikelnummer) ? item.invoice_artikelnummer : '';
+                        this.openAddModal = true;
+                        this.openInvoiceModal = false;
+                        
+                        this.$nextTick(() => {
+                            const modal = document.querySelector('form[action*="lager/store"]');
+                            if (modal) {
+                                const setInput = (name, val) => {
+                                    const el = modal.querySelector(`[name="${name}"]`);
+                                    if (el) el.value = val;
+                                };
+                                setInput('bezeichnung', item.invoice_bezeichnung || '');
+                                setInput('ek_ohne_st', item.invoice_netto_preis ? item.invoice_netto_preis.toFixed(2) : '0.00');
+                                setInput('vk_ohne_st', item.invoice_netto_preis ? item.invoice_netto_preis.toFixed(2) : '0.00');
+                                if (item.invoice_einheit) setInput('einheit', item.invoice_einheit);
+                                if (item.invoice_ust) setInput('steuersatz', Math.round(item.invoice_ust).toString());
+                                if (this.addArtikelNr) {
+                                    setInput('neue_artikelnummer', this.addArtikelNr);
+                                } else {
+                                    this.fetchNewArtikelNr();
+                                }
+                            }
+                        });
+                    },
+
+                    uploadAndParseInvoice(event) {
+                        const file = event.target.files ? event.target.files[0] : null;
+                        if (!file) return;
+                        
+                        this.invoiceFileName = file.name;
+                        this.invoiceStep = 'loading';
+                        this.invoiceError = null;
+                        this.showInvoiceDebug = false;
+                        
+                        const formData = new FormData();
+                        formData.append('invoice_file', file);
+                        formData.append('_token', '{{ csrf_token() }}');
+                        
+                        fetch('{{ route("sck.lager.parse-invoice") }}', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            console.log('[PDF Invoice Parser Response]', res);
+                            if (!res.success) {
+                                this.invoiceError = res.message || 'Fehler beim Analysieren der Rechnung.';
+                                this.invoiceStep = 'upload';
+                                return;
+                            }
+                            if (res.items) {
+                                res.items.forEach(it => {
+                                    it.quantity = it.invoice_menge || 1;
+                                    it.update_price = false;
+                                    it.selected_item_id = it.matched_item ? it.matched_item.id : null;
+                                });
+                            }
+                            this.invoiceData = res;
+                            this.invoiceStep = 'review';
+
+                            // Auto-expand debug logs if 0 items were detected
+                            if (!res.items || res.items.length === 0) {
+                                this.showInvoiceDebug = true;
+                            }
+                        })
+                        .catch(err => {
+                            console.error('[PDF Invoice Parser Error]', err);
+                            this.invoiceError = 'Fehler beim Hochladen: ' + err.message;
+                            this.invoiceStep = 'upload';
+                        });
+                    },
+
+                    submitInvoiceDeduction() {
+                        if (!this.invoiceData || !this.invoiceData.items.length) return;
+                        
+                        const validItems = this.invoiceData.items
+                            .filter(it => it.selected_item_id)
+                            .map(it => ({
+                                item_id: it.selected_item_id,
+                                quantity: parseInt(it.quantity) || 1,
+                                update_price: it.update_price ? 1 : 0,
+                                new_price: parseFloat(it.invoice_netto_preis) || 0
+                            }));
+                            
+                        if (!validItems.length) {
+                            alert('Keine gültigen Lagerartikel für den Abzug zugeordnet.');
+                            return;
+                        }
+                        
+                        this.isSubmittingInvoiceDeduction = true;
+                        
+                        fetch('{{ route("sck.lager.process-invoice-deduction") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                items: validItems,
+                                invoice_number: this.invoiceData.invoice_info ? this.invoiceData.invoice_info.number : 'ausstehend'
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            this.isSubmittingInvoiceDeduction = false;
+                            if (res.success) {
+                                this.openInvoiceModal = false;
+                                window.location.reload();
+                            } else {
+                                alert(res.message || 'Fehler beim Abziehen des Bestands.');
+                            }
+                        })
+                        .catch(err => {
+                            this.isSubmittingInvoiceDeduction = false;
+                            alert('Netzwerkfehler: ' + err.message);
+                        });
+                    },
+                    addArtikelNr: '',
+                    addArtikelNrLoading: false,
+                    addArtikelNrError: '',
+                    editArtikelNrError: '',
+                    showDatevStatus: {{ $showDatevStatus ? 'true' : 'false' }},
+                    openExport: false,
+                    selectedItem: {
+                        id: showItem ? showItem.id : '',
+                        bezeichnung: showItem ? showItem.bezeichnung : '',
+                        geraet: showItem ? showItem.geraet : '',
+                        artikelgruppe: showItem ? (showItem.artikelgruppe || '') : '',
+                        einheit: showItem ? (showItem.einheit || 'Stück') : 'Stück',
+                        steuersatz: showItem ? (showItem.steuersatz || '19') : '19',
+                        lieferant: showItem ? showItem.lieferant : '',
+                        ek_ohne_st: showItem ? parseFloat(showItem.ek_ohne_st).toFixed(2) : '',
+                        vk_ohne_st: showItem ? parseFloat(showItem.vk_ohne_st).toFixed(2) : '',
+                        alte_artikelnummer: showItem ? showItem.alte_artikelnummer : '',
+                        neue_artikelnummer: showItem ? showItem.neue_artikelnummer : '',
+                        stueckzahl: showItem ? showItem.stueckzahl : 0,
+                        kommentar: showItem ? (showItem.kommentar || '') : '',
+                        datev_exported: showItem ? showItem.datev_exported : false
+                    },
+                    printSize: 'small',
+                    printFields: {
+                        geraet: true,
+                        lieferant: true,
+                        ek: false,
+                        vk: false,
+                        alte_nr: false,
+                        neue_nr: true,
+                        kommentar: false
+                    },
+                    tplQuery: '',
+                    tplResults: [],
+                    tplLoading: false,
+                    
+                    logs: initData.logs || [],
+                    showHistoryModal: false,
+                    historySearch: '',
+                    historyPage: 1,
+                    historyPerPage: 10,
+                    historyTypeFilter: 'all',
+                    historyItemFilter: 'all',
+                    
+                    get filteredLogs() {
+                        let list = this.logs;
+                        if (this.historyTypeFilter !== 'all') {
+                            list = list.filter(log => log.type === this.historyTypeFilter);
+                        }
+                        if (this.historyItemFilter !== 'all') {
+                            const itemId = parseInt(this.historyItemFilter);
+                            list = list.filter(log => log.item_id === itemId);
+                        }
+                        if (!this.historySearch.trim()) return list;
+                        const q = this.historySearch.toLowerCase();
+                        return list.filter(log => 
+                            log.message.toLowerCase().includes(q) || 
+                            log.action.toLowerCase().includes(q) ||
+                            log.time.toLowerCase().includes(q)
+                        );
+                    },
+                    get paginatedLogs() {
+                        const start = (this.historyPage - 1) * this.historyPerPage;
+                        return this.filteredLogs.slice(start, start + this.historyPerPage);
+                    },
+                    get totalPages() {
+                        return Math.ceil(this.filteredLogs.length / this.historyPerPage) || 1;
+                    },
+                    clearLogs() {
+                        window.axios.post('{{ route('sck.lager.scan.clear_logs') }}')
+                        .then(res => {
+                            if (res.data.success) {
+                                this.logs = [];
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Failed to clear logs: ", err);
+                        });
+                    },
+                    init() {
+                        if (this.openShowModal) {
+                            this.$nextTick(() => {
+                                renderDetailQR();
+                            });
+                        }
+                        this.$watch('openShowModal', val => {
+                            if (val) {
+                                this.$nextTick(() => {
+                                    renderDetailQR();
+                                });
+                            } else {
+                                if (window.location.pathname.includes('/artikel/')) {
+                                    history.pushState(null, '', '{{ route('sck.lager.index') }}');
+                                }
+                            }
+                        });
+                        this.$watch('showDatevStatus', val => {
+                            fetch('{{ route('sck.lager.toggle-datev-status-session') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({ show: val })
+                            });
+                        });
+                    },
+                    searchTemplate() {
+                        if (this.tplQuery.length < 2) {
+                            this.tplResults = [];
+                            return;
+                        }
+                        this.tplLoading = true;
+                        fetch('{{ route('sck.lager.search-json') }}?q=' + encodeURIComponent(this.tplQuery))
+                            .then(res => res.json())
+                            .then(data => {
+                                this.tplResults = data;
+                                this.tplLoading = false;
+                            })
+                            .catch(() => {
+                                this.tplLoading = false;
+                            });
+                    },
+                    applyTemplate(item) {
+                        document.getElementById('bezeichnung').value = item.bezeichnung;
+                        document.getElementById('geraet').value = item.geraet;
+                        document.getElementById('lieferant').value = item.lieferant;
+                        document.getElementById('ek_ohne_st').value = item.ek_ohne_st;
+                        document.getElementById('vk_ohne_st').value = item.vk_ohne_st;
+                        document.getElementById('alte_artikelnummer').value = item.alte_artikelnummer || '';
+                        document.getElementById('kommentar').value = item.kommentar || '';
+                        this.tplQuery = '';
+                        this.tplResults = [];
+                    },
+                    async fetchNewArtikelNr() {
+                        this.addArtikelNrLoading = true;
+                        this.addArtikelNrError = '';
+                        try {
+                            const res = await fetch('{{ route('sck.lager.generate-number') }}');
+                            const data = await res.json();
+                            this.addArtikelNr = data.number;
+                        } catch (e) {
+                            this.addArtikelNrError = 'Fehler beim Generieren.';
+                        }
+                        this.addArtikelNrLoading = false;
+                    },
+                    async rerollEditArtikelNr() {
+                        this.editArtikelNrError = '';
+                        try {
+                            const res = await fetch('{{ route('sck.lager.generate-number') }}');
+                            const data = await res.json();
+                            this.selectedItem.neue_artikelnummer = data.number;
+                        } catch (e) {
+                            this.editArtikelNrError = 'Fehler beim Generieren.';
+                        }
+                    }
+                };
+            };
+
+        if (window.Alpine) {
+            registerWarehouseManager();
+        } else {
+            document.addEventListener('alpine:init', registerWarehouseManager);
         }
-        this.$watch('openShowModal', val => {
-            if (val) {
-                this.$nextTick(() => {
-                    renderDetailQR();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Render table row QR codes using QRious
+            document.querySelectorAll('.qr-canvas').forEach(canvas => {
+                new QRious({
+                    element: canvas,
+                    value: canvas.dataset.url,
+                    size: 40,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                    level: 'M'
                 });
-            } else {
-                if (window.location.pathname.includes('/artikel/')) {
-                    history.pushState(null, '', '{{ route('sck.lager.index') }}');
+            });
+
+            // Global Tooltip system
+            let activeTooltip = null;
+            const tooltipEl = document.createElement('div');
+            tooltipEl.className = 'global-tooltip-item';
+            document.body.appendChild(tooltipEl);
+
+            document.addEventListener('mouseover', (e) => {
+                const target = e.target.closest('.has-tooltip');
+                if (!target) return;
+                if (activeTooltip === target) return;
+                
+                const textContainer = target.querySelector('.tooltip-item');
+                const text = textContainer ? textContainer.innerHTML : target.title;
+                if (!text) return;
+
+                tooltipEl.innerHTML = text;
+                tooltipEl.classList.add('show');
+                activeTooltip = target;
+                
+                positionTooltip(target);
+            });
+
+            document.addEventListener('mouseout', (e) => {
+                if (!activeTooltip) return;
+                const related = e.relatedTarget;
+                if (!related || !activeTooltip.contains(related)) {
+                    tooltipEl.classList.remove('show');
+                    activeTooltip = null;
                 }
+            });
+
+            function positionTooltip(target) {
+                if (!activeTooltip) return;
+                const rect = target.getBoundingClientRect();
+                const tooltipRect = tooltipEl.getBoundingClientRect();
+                
+                let top = rect.top - tooltipRect.height - 8 + window.scrollY;
+                let left = rect.left + (rect.width - tooltipRect.width) / 2 + window.scrollX;
+                
+                if (rect.top - tooltipRect.height - 8 < 0) {
+                    top = rect.bottom + 8 + window.scrollY;
+                }
+                
+                if (left < 10) left = 10;
+                if (left + tooltipRect.width > window.innerWidth - 10) {
+                    left = window.innerWidth - tooltipRect.width - 10;
+                }
+                
+                tooltipEl.style.top = `${top}px`;
+                tooltipEl.style.left = `${left}px`;
+            }
+
+            window.addEventListener('scroll', () => { if (activeTooltip) positionTooltip(activeTooltip); }, true);
+            window.addEventListener('resize', () => { if (activeTooltip) positionTooltip(activeTooltip); });
+
+            // Right-Click Context Menu Logic
+            const contextMenu = document.getElementById('custom-context-menu');
+
+            function positionContextMenu(clientX, clientY) {
+                // Temporarily show off-screen to measure
+                contextMenu.style.visibility = 'hidden';
+                contextMenu.style.left = '0px';
+                contextMenu.style.top  = '0px';
+                contextMenu.classList.remove('hidden');
+
+                const menuW = contextMenu.offsetWidth;
+                const menuH = contextMenu.offsetHeight;
+
+                contextMenu.classList.add('hidden');
+                contextMenu.style.visibility = '';
+
+                const viewW = window.innerWidth;
+                const viewH = window.innerHeight;
+
+                // Flip horizontally if overflows right
+                let left = clientX;
+                if (clientX + menuW + 12 > viewW) {
+                    left = clientX - menuW;
+                }
+                // Clamp left
+                left = Math.max(8, left);
+
+                // Flip vertically if overflows bottom
+                let top = clientY;
+                if (clientY + menuH + 12 > viewH) {
+                    top = clientY - menuH;
+                }
+                // Clamp top
+                top = Math.max(8, top);
+
+                contextMenu.style.left = `${left}px`;
+                contextMenu.style.top  = `${top}px`;
+                contextMenu.classList.remove('hidden');
+            }
+
+            function triggerContextMenu(row, clientX, clientY) {
+                const id = row.dataset.id;
+                const bezeichnung = row.dataset.bezeichnung;
+                const geraet = row.dataset.geraet;
+                const lieferant = row.dataset.lieferant;
+                const ek = row.dataset.ek;
+                const vk = row.dataset.vk;
+                const alteNr = row.dataset.alteNr;
+                const neueNr = row.dataset.neueNr;
+                const stueckzahl = parseInt(row.dataset.stueckzahl);
+                const kommentar = row.dataset.kommentar;
+                const datevExported = row.dataset.datevExported === '1' || row.dataset.datevExported === 'true';
+
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                alpineData.selectedItem = {
+                    id, bezeichnung, geraet, lieferant,
+                    ek_ohne_st: ek, vk_ohne_st: vk,
+                    alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
+                    stueckzahl, kommentar, datev_exported: datevExported
+                };
+
+                positionContextMenu(clientX, clientY);
+            }
+
+            let touchTimeout = null;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const LONG_PRESS_DURATION = 600; // ms
+
+            document.querySelectorAll('.cursor-context-menu').forEach(row => {
+                row.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    triggerContextMenu(row, e.clientX, e.clientY);
+                });
+
+                row.addEventListener('touchstart', (e) => {
+                    if (e.touches.length !== 1) return;
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+
+                    touchTimeout = setTimeout(() => {
+                        e.preventDefault();
+                        triggerContextMenu(row, touchStartX, touchStartY);
+                    }, LONG_PRESS_DURATION);
+                }, { passive: false });
+
+                row.addEventListener('touchmove', (e) => {
+                    if (touchTimeout) {
+                        const touch = e.touches[0];
+                        if (Math.abs(touch.clientX - touchStartX) > 10 || Math.abs(touch.clientY - touchStartY) > 10) {
+                            clearTimeout(touchTimeout);
+                            touchTimeout = null;
+                        }
+                    }
+                });
+
+                row.addEventListener('touchend', () => {
+                    if (touchTimeout) {
+                        clearTimeout(touchTimeout);
+                        touchTimeout = null;
+                    }
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#custom-context-menu')) {
+                    contextMenu.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    contextMenu.classList.add('hidden');
+                }
+            });
+
+
+            // Client-Side Instant Filtering
+            const searchInput = document.querySelector('input[name="search"]');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('.cursor-context-menu');
+                    
+                    rows.forEach(row => {
+                        const bezeichnung = (row.dataset.bezeichnung || '').toLowerCase();
+                        const geraet = (row.dataset.geraet || '').toLowerCase();
+                        const lieferant = (row.dataset.lieferant || '').toLowerCase();
+                        const alteNr = (row.dataset.alteNr || '').toLowerCase();
+                        const neueNr = (row.dataset.neueNr || '').toLowerCase();
+                        
+                        const matches = bezeichnung.includes(query) ||
+                                        geraet.includes(query) ||
+                                        lieferant.includes(query) ||
+                                        alteNr.includes(query) ||
+                                        neueNr.includes(query);
+                                        
+                        if (matches) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
             }
         });
-    },
-    searchTemplate() {
-        if (this.tplQuery.length < 2) {
-            this.tplResults = [];
-            return;
-        }
-        this.tplLoading = true;
-        fetch('{{ route('sck.lager.search-json') }}?q=' + encodeURIComponent(this.tplQuery))
-            .then(res => res.json())
-            .then(data => {
-                this.tplResults = data;
-                this.tplLoading = false;
-            })
-            .catch(() => {
-                this.tplLoading = false;
-            });
-    },
-    applyTemplate(item) {
-        document.getElementById('bezeichnung').value = item.bezeichnung;
-        document.getElementById('geraet').value = item.geraet;
-        document.getElementById('lieferant').value = item.lieferant;
-        document.getElementById('ek_ohne_st').value = item.ek_ohne_st;
-        document.getElementById('vk_ohne_st').value = item.vk_ohne_st;
-        document.getElementById('alte_artikelnummer').value = item.alte_artikelnummer || '';
-        document.getElementById('kommentar').value = item.kommentar || '';
-        this.tplQuery = '';
-        this.tplResults = [];
-    },
-    async fetchNewArtikelNr() {
-        this.addArtikelNrLoading = true;
-        this.addArtikelNrError = '';
-        try {
-            const res = await fetch('{{ route('sck.lager.generate-number') }}');
-            const data = await res.json();
-            this.addArtikelNr = data.number;
-        } catch (e) {
-            this.addArtikelNrError = 'Fehler beim Generieren.';
-        }
-        this.addArtikelNrLoading = false;
-    },
-    async rerollEditArtikelNr() {
-        this.editArtikelNrError = '';
-        try {
-            const res = await fetch('{{ route('sck.lager.generate-number') }}');
-            const data = await res.json();
-            this.selectedItem.neue_artikelnummer = data.number;
-        } catch (e) {
-            this.editArtikelNrError = 'Fehler beim Generieren.';
+
+            // Global helper functions
+            window.renderGlobalZoomQR = function() {
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const neueNr = alpineData.selectedItem.neue_artikelnummer;
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('global-zoom-qr');
+                    if (canvas) {
+                        new QRious({
+                            element: canvas,
+                            value: targetUrl,
+                            size: 180,
+                            background: '#ffffff',
+                            foreground: '#000000',
+                            level: 'H'
+                        });
+                    }
+                }, 50);
+            };
+
+            window.renderDetailQR = function() {
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const neueNr = alpineData.selectedItem.neue_artikelnummer;
+                if (!neueNr) return;
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('detail-qr-canvas');
+                    if (canvas) {
+                        new QRious({
+                            element: canvas,
+                            value: targetUrl,
+                            size: 96,
+                            padding: 0,
+                            background: '#ffffff',
+                            foreground: '#000000',
+                            level: 'H'
+                        });
+                    }
+                }, 50);
+            };
+
+            window.renderPrintQR = function() {
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const neueNr = alpineData.selectedItem.neue_artikelnummer;
+                if (!neueNr) return;
+                const size = alpineData.printSize;
+                const qrSize = size === 'small' ? 80 : 120;
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                
+                setTimeout(() => {
+                    const canvas = document.getElementById('print-label-qr');
+                    if (canvas) {
+                        new QRious({
+                            element: canvas,
+                            value: targetUrl,
+                            size: qrSize,
+                            background: '#ffffff',
+                            foreground: '#000000',
+                            level: 'H'
+                        });
+                    }
+                }, 50);
+            };
+
+            window.printLabel = function(neueNr, size) {
+                // Gather Alpine state
+                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
+                const item = alpineData.selectedItem;
+                const fields = alpineData.printFields;
+
+                // Label dimensions (matching CSS preview sizes)
+                const labelW = size === 'small' ? 320 : 480;
+                const labelH = size === 'small' ? 180 : 300;
+                const qrSize = size === 'small' ? 80 : 120;
+                const padding = size === 'small' ? 14 : 22;
+
+                // Generate QR code as data URL via a temp canvas
+                const tmpCanvas = document.createElement('canvas');
+                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
+                new QRious({
+                    element: tmpCanvas,
+                    value: targetUrl,
+                    size: qrSize,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                    level: 'H'
+                });
+                const qrDataUrl = tmpCanvas.toDataURL('image/png');
+
+                // Build field rows HTML
+                let fieldsHtml = '';
+                if (fields.geraet && item.geraet)      fieldsHtml += `<div class="field-row"><b>Kat:</b> ${esc(item.geraet)}</div>`;
+                if (fields.lieferant && item.lieferant) fieldsHtml += `<div class="field-row"><b>Lief:</b> ${esc(item.lieferant)}</div>`;
+                if (fields.ek && item.ek_ohne_st)       fieldsHtml += `<div class="field-row"><b>EK:</b> ${esc(item.ek_ohne_st)} €</div>`;
+                if (fields.vk && item.vk_ohne_st)       fieldsHtml += `<div class="field-row"><b>VK:</b> ${esc(item.vk_ohne_st)} €</div>`;
+                if (fields.alte_nr && item.alte_artikelnummer) fieldsHtml += `<div class="field-row"><b>Alt:</b> ${esc(item.alte_artikelnummer)}</div>`;
+                if (fields.neue_nr)                     fieldsHtml += `<div class="field-row"><b>Neu:</b> ${esc(item.neue_artikelnummer)}</div>`;
+                let kommentarHtml = '';
+                if (fields.kommentar && item.kommentar) {
+                    kommentarHtml = `<div style="border-top:1px solid #ccc;padding-top:4px;margin-top:4px;font-size:8px;color:#555;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(item.kommentar)}</div>`;
+                }
+
+                const titleFontSize = size === 'small' ? '13px' : '18px';
+                const fieldFontSize = size === 'small' ? '9px'  : '11px';
+
+                const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Label: ${esc(item.bezeichnung)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page {
+    size: ${labelW}px ${labelH}px;
+    margin: 0;
+  }
+  body {
+    width: ${labelW}px;
+    height: ${labelH}px;
+    font-family: 'Figtree', Arial, sans-serif;
+    background: white;
+    color: black;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .label {
+    width: ${labelW}px;
+    height: ${labelH}px;
+    padding: ${padding}px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow: hidden;
+  }
+  .qr-wrap {
+    flex-shrink: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-wrap img {
+    display: block;
+    width: ${qrSize}px;
+    height: ${qrSize}px;
+  }
+  .info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .title {
+    font-size: ${titleFontSize};
+    font-weight: 900;
+    line-height: 1.2;
+    color: #000;
+    word-break: break-word;
+  }
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 8px;
+    margin-top: 5px;
+  }
+  .field-row {
+    font-size: ${fieldFontSize};
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .field-row b {
+    font-weight: 700;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+<div class="label">
+  <div class="qr-wrap">
+    <img src="${qrDataUrl}" alt="QR Code">
+  </div>
+  <div class="info">
+    <div>
+      <div class="title">${esc(item.bezeichnung)}</div>
+      <div class="fields">${fieldsHtml}</div>
+    </div>
+    ${kommentarHtml}
+  </div>
+</div>
+\x3Cscript\x3Ewindow.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };\x3C/script\x3E
+</body>
+</html>`;
+
+                function esc(str) {
+                    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                }
+
+                const win = window.open('', '_blank', `width=${labelW + 40},height=${labelH + 120},menubar=no,toolbar=no,status=no`);
+                if (win) {
+                    win.document.write(html);
+                    win.document.close();
+                } else {
+                    alert('Bitte erlauben Sie Pop-ups für diese Seite, um den Druckdialog zu öffnen.');
+                }
+            };
+
+    function registerWarehouseManager() {
+        if (window.Alpine) {
+            Alpine.data('warehouseManager', window.warehouseManager);
         }
     }
-}">
+    registerWarehouseManager();
+    document.addEventListener('alpine:init', registerWarehouseManager);
+</script>
+
+<div class="space-y-6" x-data="{ ...massSelectionState({ selected: @js($selectedIds), page: @js($pageIds), all: @js($matchingIds), selectionUrl: @js(route('sck.lager.bulk-selection')), csrf: @js(csrf_token()), actions: { delete: @js(route('sck.lager.bulk-destroy')), export: @js(route('sck.lager.bulk-export')), exportDatev: @js(route('sck.lager.bulk-export-datev')), adjustStock: @js(route('sck.lager.bulk-update-stock')), toggleDatev: @js(route('sck.lager.bulk-toggle-datev-exported')) } }), ...warehouseManager() }" x-init="initMassSelection()" @toggle-datev-status.window="showDatevStatus = !showDatevStatus">
+
+    <!-- Multi-select Action Rail -->
+    <x-multi-select.index-panel :page-count="count($pageIds)" :all-count="count($matchingIds)" item-name="Artikel">
+        
+        <!-- Mass Export Dropdown -->
+        <x-multi-select.action icon="fa-solid fa-file-export" tooltip="Ausgewählte exportieren" active-color="cyan" :dropdown="true">
+            <a href="#" @click.prevent="submitBulk('export', { include_stock: 1 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 font-semibold transition-colors">
+                <i class="fa-solid fa-file-invoice-dollar text-cyan-400"></i>
+                <span>Mit Lagerbestand</span>
+            </a>
+            <a href="#" @click.prevent="submitBulk('export', { include_stock: 0 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 font-semibold transition-colors">
+                <i class="fa-solid fa-file-lines text-purple-400"></i>
+                <span>Ohne Lagerbestand</span>
+            </a>
+            <a href="#" @click.prevent="submitBulk('exportDatev')" class="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 font-semibold transition-colors border-t border-gray-800">
+                <i class="fa-solid fa-file-invoice text-emerald-400"></i>
+                <span>DATEV Export (CSV)</span>
+            </a>
+        </x-multi-select.action>
+
+        <!-- Mass DATEV Status Adjustment Dropdown -->
+        <x-multi-select.action icon="fa-solid fa-file-shield" tooltip="DATEV Export-Status ändern" active-color="emerald" :dropdown="true">
+            <a href="#" @click.prevent="submitBulk('toggleDatev', { status: 1 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-emerald-300 hover:bg-emerald-500/10 font-semibold transition-colors">
+                <i class="fa-solid fa-check text-emerald-400"></i>
+                <span>Als exportiert markieren</span>
+            </a>
+            <a href="#" @click.prevent="submitBulk('toggleDatev', { status: 0 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-rose-300 hover:bg-rose-500/10 font-semibold transition-colors border-t border-gray-800">
+                <i class="fa-solid fa-rotate-left text-rose-400"></i>
+                <span>Export-Status zurücksetzen</span>
+            </a>
+        </x-multi-select.action>
+
+        <!-- Mass Stock Adjustment Dropdown -->
+        <x-multi-select.action icon="fa-solid fa-boxes-packing" tooltip="Massen-Bestandsänderung" active-color="amber" :dropdown="true">
+            <a href="#" @click.prevent="submitBulk('adjustStock', { mode: 'set', amount: 0 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-amber-300 hover:bg-amber-500/10 font-semibold transition-colors">
+                <i class="fa-solid fa-rotate-left text-amber-400"></i>
+                <span>Bestand auf 0 setzen</span>
+            </a>
+            <a href="#" @click.prevent="submitBulk('adjustStock', { mode: 'add', amount: 1 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 font-semibold transition-colors">
+                <i class="fa-solid fa-plus text-emerald-400"></i>
+                <span>Bestand +1 erhöhen</span>
+            </a>
+            <a href="#" @click.prevent="submitBulk('adjustStock', { mode: 'add', amount: 5 })" class="flex items-center gap-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 font-semibold transition-colors">
+                <i class="fa-solid fa-layer-group text-cyan-400"></i>
+                <span>Bestand +5 erhöhen</span>
+            </a>
+        </x-multi-select.action>
+
+        <!-- Mass Delete -->
+        <x-multi-select.action icon="fa-solid fa-trash-can" tooltip="Markierte Artikel löschen" active-color="rose" action="submitBulk('delete')" />
+
+    </x-multi-select.index-panel>
 
     <!-- Top Action Bar -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
@@ -130,6 +834,13 @@
                 <div class="tooltip-item tooltip-left">Öffnet die Smartphone-Kamera, um QR-Codes direkt ein- oder auszulesen und den Bestand anzupassen.</div>
             </a>
 
+            <!-- Activity log button -->
+            <button @click="historyItemFilter = 'all'; historyTypeFilter = 'all'; historyPage = 1; showHistoryModal = true;" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-colors has-tooltip">
+                <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i>
+                <span>Aktivitätsprotokoll</span>
+                <div class="tooltip-item">Öffnet das dauerhafte Protokoll aller Bestandsänderungen (Scanner, manuelle Updates, Schnelländerungen).</div>
+            </button>
+
             <!-- Add new item button -->
             <button @click="openAddModal = true; fetchNewArtikelNr()" class="btn-neon-cyan text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center space-x-2 transition-all duration-200 has-tooltip">
                 <i class="fa-solid fa-circle-plus"></i>
@@ -137,28 +848,39 @@
                 <div class="tooltip-item">Fügt einen neuen Artikel im Lagersystem hinzu. Die 5-stellige Artikelnummer wird automatisch generiert.</div>
             </button>
 
-            <!-- Export dropdown (using Alpine.js) -->
-            <div x-data="{ openExport: false }" class="relative inline-block text-left">
-                <button @click="openExport = !openExport" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-4 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 transition-colors has-tooltip">
-                    <i class="fa-solid fa-file-export"></i>
-                    <span>Exportieren</span>
-                    <i class="fa-solid fa-chevron-down text-xxs"></i>
-                    <div class="tooltip-item">Lädt die Produktliste als UTF-8 codierte CSV-Datei für Excel herunter.</div>
+            <!-- Redesigned Upload & Export Button Group (Completely Green) -->
+            <div x-data="{ openExport: false }" class="inline-flex rounded-xl shadow-lg shadow-emerald-600/20 bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-500/30 relative">
+                <!-- Main Upload Button -->
+                <button @click="openInvoiceModal = true; invoiceStep = 'upload'; invoiceError = null;" class="hover:from-emerald-500 hover:to-teal-500 text-white px-4 py-2 text-sm font-bold flex items-center space-x-2 transition-all duration-200 border-r border-emerald-500/20 rounded-l-xl has-tooltip">
+                    <i class="fa-solid fa-file-arrow-up"></i>
+                    <span>Rechnung hochladen</span>
+                    <div class="tooltip-item tooltip-left">Lädt eine DATEV-Rechnung als PDF hoch, erkennt genutzte Artikel und zieht diese nach Prüfung automatisch vom Lagerbestand ab.</div>
                 </button>
-                <div x-show="openExport" @click.away="openExport = false" class="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-gray-900 border border-gray-800 focus:outline-none z-50 glass-panel" x-cloak>
+                <!-- Export Dropdown Sub-part Toggle Button -->
+                <button @click="openExport = !openExport" class="hover:bg-black/10 text-white px-3 py-2 text-xs font-semibold flex items-center justify-center transition-colors rounded-r-xl has-tooltip">
+                    <i class="fa-solid fa-file-export"></i>
+                    <i class="fa-solid fa-chevron-down text-[9px] ml-1.5"></i>
+                    <div class="tooltip-item">DATEV Export herunterladen oder Spalten einblenden.</div>
+                </button>
+                <!-- Dropdown Menu -->
+                <div x-show="openExport" @click.away="openExport = false" class="origin-top-right absolute right-0 mt-10 w-60 rounded-xl shadow-2xl bg-gray-950 border border-gray-850 focus:outline-none z-50 glass-panel" x-cloak>
                     <div class="py-1">
-                        <a href="{{ route('sck.lager.export', ['include_stock' => 1]) }}" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors">
+                        <a href="{{ route('sck.lager.export', ['include_stock' => 1]) }}" class="flex items-center space-x-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors">
                             <i class="fa-solid fa-file-invoice-dollar text-cyan-400"></i>
                             <span>Mit aktuellem Lagerbestand</span>
                         </a>
-                        <a href="{{ route('sck.lager.export', ['include_stock' => 0]) }}" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors">
+                        <a href="{{ route('sck.lager.export', ['include_stock' => 0]) }}" class="flex items-center space-x-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors">
                             <i class="fa-solid fa-file-lines text-purple-400"></i>
                             <span>Ohne Lagerbestand (nur Katalog)</span>
                         </a>
-                        <a href="{{ route('sck.lager.export-datev') }}" class="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors border-t border-gray-800">
+                        <a href="{{ route('sck.lager.export-datev') }}" class="flex items-center space-x-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors border-t border-gray-800">
                             <i class="fa-solid fa-file-invoice text-emerald-400"></i>
                             <span>DATEV Export (CSV)</span>
                         </a>
+                        <button type="button" @click="window.dispatchEvent(new CustomEvent('toggle-datev-status')); openExport = false" class="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-xs text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors border-t border-gray-800">
+                            <i class="fa-solid" :class="showDatevStatus ? 'fa-eye-slash text-amber-400' : 'fa-eye text-cyan-400'"></i>
+                            <span x-text="showDatevStatus ? 'DATEV-Status ausblenden' : 'DATEV-Status einblenden'"></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -221,11 +943,14 @@
     </div>
 
     <!-- Data Table Card -->
-    <div class="glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
+    <div class="min-w-0 transition-[margin,width] duration-500 ease-out glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-2xl" x-bind:style="panelNeedsSpace ? 'margin-left: 76px; width: calc(100% - 76px); max-width: calc(100% - 76px);' : ''">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-950/65 text-gray-400 border-b border-gray-800 text-xs uppercase font-bold tracking-wider">
+                        <th class="py-4 px-3 text-center !w-12">
+                            <x-multi-select.header-checkbox />
+                        </th>
                         <th class="py-4 px-5">
                             <a href="{{ route('sck.lager.index', array_merge(request()->query(), ['sort_by' => 'bezeichnung', 'sort_dir' => request('sort_by') === 'bezeichnung' && request('sort_dir') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center space-x-1 hover:text-cyan-400 transition-colors">
                                 <span>Bezeichnung</span>
@@ -266,6 +991,9 @@
                                 <div class="tooltip-item">Verkaufspreis netto (ohne Steuer) pro Einheit.</div>
                             </a>
                         </th>
+                        <th class="py-4 px-4 text-center" x-show="showDatevStatus" x-cloak>
+                            DATEV Export
+                        </th>
                         <th class="py-4 px-4 text-center">Einheit</th>
                         <th class="py-4 px-4 text-center font-semibold">Steuer</th>
                         <th class="py-4 px-4 text-center font-normal">Alte Nr.</th>
@@ -290,6 +1018,7 @@
                 <tbody class="divide-y divide-gray-800 text-sm">
                     @forelse($items as $item)
                         <tr class="hover:bg-gray-900/30 transition-colors cursor-context-menu"
+                            :class="{ '!bg-cyan-500/10': selectedIds.includes('{{ $item->id }}') }"
                             data-id="{{ $item->id }}"
                             data-bezeichnung="{{ $item->bezeichnung }}"
                             data-geraet="{{ $item->geraet }}"
@@ -302,7 +1031,9 @@
                             data-alte-nr="{{ $item->alte_artikelnummer ?? '' }}"
                             data-neue-nr="{{ $item->neue_artikelnummer }}"
                             data-stueckzahl="{{ $item->stueckzahl }}"
-                            data-kommentar="{{ $item->kommentar ?? '' }}">
+                            data-kommentar="{{ $item->kommentar ?? '' }}"
+                            data-datev-exported="{{ $item->datev_exported ? '1' : '0' }}">
+                            <x-multi-select.row-checkbox :id="$item->id" />
                             <td class="py-4 px-5 font-semibold text-gray-200">
                                 <a href="{{ route('sck.lager.artikel', $item->neue_artikelnummer) }}" 
                                    @click.prevent="selectedItem = {
@@ -318,7 +1049,8 @@
                                         alte_artikelnummer: '{{ $item->alte_artikelnummer ?? '' }}',
                                         neue_artikelnummer: '{{ $item->neue_artikelnummer }}',
                                         stueckzahl: '{{ $item->stueckzahl }}',
-                                        kommentar: '{{ addslashes($item->kommentar ?? '') }}'
+                                        kommentar: '{{ addslashes($item->kommentar ?? '') }}',
+                                        datev_exported: {{ $item->datev_exported ? 'true' : 'false' }}
                                    };
                                    openShowModal = true;
                                    history.pushState(null, '', '{{ route('sck.lager.artikel', $item->neue_artikelnummer) }}');"
@@ -331,6 +1063,13 @@
                             <td class="py-4 px-4 text-gray-400">{{ $item->lieferant }}</td>
                             <td class="py-4 px-4 text-right text-gray-300 font-mono">{{ number_format($item->ek_ohne_st, 2, ',', '.') }} €</td>
                             <td class="py-4 px-4 text-right text-gray-300 font-mono">{{ number_format($item->vk_ohne_st, 2, ',', '.') }} €</td>
+                            <td class="py-4 px-4 text-center" x-show="showDatevStatus" x-cloak>
+                                @if($item->datev_exported)
+                                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">Exportiert</span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] bg-gray-800 text-gray-500 border border-gray-700">Bereit</span>
+                                @endif
+                            </td>
                             <td class="py-4 px-4 text-center text-gray-300">{{ $item->einheit ?? 'Stück' }}</td>
                             <td class="py-4 px-4 text-center text-gray-400 font-mono">{{ $item->steuersatz ?? '19' }}%</td>
                             <td class="py-4 px-4 text-center text-gray-500 font-mono">{{ $item->alte_artikelnummer ?? '-' }}</td>
@@ -351,7 +1090,8 @@
                                         alte_artikelnummer: '{{ $item->alte_artikelnummer ?? '' }}',
                                         neue_artikelnummer: '{{ $item->neue_artikelnummer }}',
                                         stueckzahl: '{{ $item->stueckzahl }}',
-                                        kommentar: '{{ addslashes($item->kommentar ?? '') }}'
+                                        kommentar: '{{ addslashes($item->kommentar ?? '') }}',
+                                        datev_exported: {{ $item->datev_exported ? 'true' : 'false' }}
                                      };
                                      openZoomModal = true;
                                      renderGlobalZoomQR();" 
@@ -511,7 +1251,7 @@
                             <i class="fa-solid fa-circle-question text-cyan-400 text-[10px]"></i>
                             <div class="tooltip-item">DATEV Steuersatz für den Artikel.</div>
                         </label>
-                        <select name="steuersatz" id="steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1 bg-gray-900 border border-gray-700 text-white">
+                        <select name="steuersatz" id="steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                             <option value="19" selected>19% (normal)</option>
                             <option value="7">7% (ermäßigt)</option>
                             <option value="0">0% (steuerfrei)</option>
@@ -653,7 +1393,7 @@
 
                     <div class="flex flex-col space-y-1">
                         <label for="edit_steuersatz" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Steuersatz *</label>
-                        <select name="steuersatz" id="edit_steuersatz" x-model="selectedItem.steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1 bg-gray-900 border border-gray-700 text-white">
+                        <select name="steuersatz" id="edit_steuersatz" x-model="selectedItem.steuersatz" required class="sck-input text-sm rounded-lg px-3 py-2 mt-1">
                             <option value="19">19% (normal)</option>
                             <option value="7">7% (ermäßigt)</option>
                             <option value="0">0% (steuerfrei)</option>
@@ -946,7 +1686,13 @@
                 </div>
             </div>
             
-            <div class="flex justify-end p-4 border-t border-gray-850 bg-gray-950/20">
+            <div class="flex justify-between items-center p-4 border-t border-gray-850 bg-gray-950/20">
+                <button type="button" 
+                        @click="historyItemFilter = selectedItem.id; historyTypeFilter = 'all'; historyPage = 1; showHistoryModal = true; openShowModal = false;" 
+                        class="bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/30 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center space-x-1.5 transition-all">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Verlauf anzeigen</span>
+                </button>
                 <button type="button" @click="openShowModal = false" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
                     Schließen
                 </button>
@@ -991,6 +1737,13 @@
             <i class="fa-solid fa-qrcode text-emerald-400"></i>
             <span>QR-Code vergrößern</span>
         </button>
+        <form :action="'{{ route('sck.lager.toggle-datev-exported', '') }}/' + selectedItem.id" method="POST" class="block">
+            @csrf
+            <button type="submit" class="context-menu-item">
+                <i class="fa-solid fa-file-shield text-emerald-400"></i>
+                <span x-text="selectedItem.datev_exported ? 'Als Bereit markieren' : 'Als Exportiert markieren'"></span>
+            </button>
+        </form>
         <div class="context-menu-divider"></div>
         <form action="{{ route('sck.lager.update-stock') }}" method="POST" class="block">
             @csrf
@@ -1007,439 +1760,461 @@
         </form>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Render table row QR codes using QRious
-            document.querySelectorAll('.qr-canvas').forEach(canvas => {
-                new QRious({
-                    element: canvas,
-                    value: canvas.dataset.url,
-                    size: 40,
-                    background: '#ffffff',
-                    foreground: '#000000',
-                    level: 'M'
-                });
-            });
+    <!-- History Modal Overlay -->
+    <div x-show="showHistoryModal" 
+         class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         x-cloak>
+        <div class="glass-panel w-full max-w-4xl rounded-2xl border border-gray-800 bg-gray-900/95 flex flex-col max-h-[85vh] overflow-hidden shadow-2xl text-left"
+             @click.away="showHistoryModal = false">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/45">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-300 flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i>
+                    <span>Dauerhaftes Aktivitätsprotokoll</span>
+                </h3>
+                <button @click="showHistoryModal = false" class="text-gray-500 hover:text-cyan-400 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
 
-            // Global Tooltip system
-            let activeTooltip = null;
-            const tooltipEl = document.createElement('div');
-            tooltipEl.className = 'global-tooltip-item';
-            document.body.appendChild(tooltipEl);
+            <!-- Modal Content Filters -->
+            <div class="p-4 border-b border-gray-850 bg-gray-950/20 flex flex-col sm:flex-row items-center gap-4">
+                <!-- Search -->
+                <div class="relative w-full sm:max-w-xs">
+                    <input type="text" 
+                           x-model="historySearch" 
+                           @input="historyPage = 1"
+                           placeholder="Protokoll durchsuchen..." 
+                           class="sck-input pl-9 pr-4 py-2 text-xs rounded-xl w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-500 text-[10px]"></i>
+                </div>
 
-            document.addEventListener('mouseover', (e) => {
-                const target = e.target.closest('.has-tooltip');
-                if (!target) return;
-                if (activeTooltip === target) return;
-                
-                const textContainer = target.querySelector('.tooltip-item');
-                const text = textContainer ? textContainer.innerHTML : target.title;
-                if (!text) return;
+                <!-- Type of change Filter -->
+                <div class="w-full sm:w-auto flex items-center space-x-2">
+                    <label class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Kategorie:</label>
+                    <select x-model="historyTypeFilter" @change="historyPage = 1" class="sck-input text-xs py-1.5 px-3 rounded-xl">
+                        <option value="all">Alle</option>
+                        <option value="scanner">Scanner</option>
+                        <option value="manual">Manuell (Details)</option>
+                        <option value="quick">Schnelländerung</option>
+                    </select>
+                </div>
 
-                tooltipEl.innerHTML = text;
-                tooltipEl.classList.add('show');
-                activeTooltip = target;
-                
-                positionTooltip(target);
-            });
+                <!-- Specific Item Filter Indicator -->
+                <div x-show="historyItemFilter !== 'all'" class="flex items-center space-x-2 bg-cyan-950/40 text-cyan-400 border border-cyan-500/25 px-3 py-1.5 rounded-xl text-xs" x-cloak>
+                    <i class="fa-solid fa-filter"></i>
+                    <span>Gefiltert nach Artikel</span>
+                    <button @click="historyItemFilter = 'all'; historyPage = 1" class="text-cyan-300 hover:text-white transition-colors ml-1">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
 
-            document.addEventListener('mouseout', (e) => {
-                if (!activeTooltip) return;
-                const related = e.relatedTarget;
-                if (!related || !activeTooltip.contains(related)) {
-                    tooltipEl.classList.remove('show');
-                    activeTooltip = null;
-                }
-            });
+                <div class="flex-grow"></div>
+                <button @click="if(confirm('Möchtest du wirklich alle Protokolle dauerhaft löschen?')) { clearLogs(); showHistoryModal = false; }" 
+                        class="btn-danger-soft text-[9px] bg-red-950/40 text-red-400 border border-red-500/20 hover:bg-red-900/30 px-3.5 py-1.5 rounded-xl transition-all font-bold uppercase tracking-wider">
+                    Gesamten Verlauf leeren
+                </button>
+            </div>
 
-            function positionTooltip(target) {
-                if (!activeTooltip) return;
-                const rect = target.getBoundingClientRect();
-                const tooltipRect = tooltipEl.getBoundingClientRect();
-                
-                let top = rect.top - tooltipRect.height - 8 + window.scrollY;
-                let left = rect.left + (rect.width - tooltipRect.width) / 2 + window.scrollX;
-                
-                if (rect.top - tooltipRect.height - 8 < 0) {
-                    top = rect.bottom + 8 + window.scrollY;
-                }
-                
-                if (left < 10) left = 10;
-                if (left + tooltipRect.width > window.innerWidth - 10) {
-                    left = window.innerWidth - tooltipRect.width - 10;
-                }
-                
-                tooltipEl.style.top = `${top}px`;
-                tooltipEl.style.left = `${left}px`;
-            }
+            <!-- Modal Table -->
+            <div class="flex-grow overflow-auto p-6">
+                <div class="glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-md">
+                    <table class="w-full text-xs text-left border-collapse history-table">
+                        <thead>
+                            <tr class="text-gray-500 font-bold uppercase tracking-wider text-[10px] text-left">
+                                <th class="pb-3 pt-3 px-3 w-36">Zeit</th>
+                                <th class="pb-3 pt-3 px-3 w-28">Herkunft</th>
+                                <th class="pb-3 pt-3 px-3 w-24">Aktion</th>
+                                <th class="pb-3 pt-3 px-3">Nachricht</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(log, idx) in paginatedLogs" :key="idx">
+                                <tr :class="log.success ? 'log-item-success border-l-4 border-emerald-500' : 'log-item-error border-l-4 border-red-500'" class="transition-colors duration-75">
+                                    <td class="py-3 px-3 font-semibold text-[10px] text-gray-400 font-mono" x-text="log.time"></td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2 py-0.5 rounded font-bold text-[8px] uppercase tracking-wider"
+                                              :class="log.type === 'scanner' ? 'badge-scanner bg-purple-900/60 text-purple-300 border border-purple-500/20' : (log.type === 'quick' ? 'badge-quick bg-cyan-900/60 text-cyan-300 border border-cyan-500/20' : 'badge-manual bg-gray-800 text-gray-300 border border-gray-700')"
+                                              x-text="log.type === 'scanner' ? 'Scanner' : (log.type === 'quick' ? 'Schnell' : 'Manuell')"></span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="px-2 py-0.5 rounded font-black uppercase text-[8px] tracking-wider text-white" 
+                                              :class="log.action === 'add' ? 'bg-emerald-600' : 'bg-rose-600'"
+                                              x-text="log.action === 'add' ? 'Eingebucht' : 'Entnahme'"></span>
+                                    </td>
+                                    <td class="py-3 px-3 text-[11px] font-sans" x-text="log.message"></td>
+                                </tr>
+                            </template>
+                            
+                            <template x-if="filteredLogs.length === 0">
+                                <tr>
+                                    <td colspan="4" class="py-12 text-center text-gray-500 font-sans">
+                                        Keine passenden Protokolleinträge gefunden.
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            window.addEventListener('scroll', () => { if (activeTooltip) positionTooltip(activeTooltip); }, true);
-            window.addEventListener('resize', () => { if (activeTooltip) positionTooltip(activeTooltip); });
-
-            // Right-Click Context Menu Logic
-            const contextMenu = document.getElementById('custom-context-menu');
-
-            function positionContextMenu(clientX, clientY) {
-                // Temporarily show off-screen to measure
-                contextMenu.style.visibility = 'hidden';
-                contextMenu.style.left = '0px';
-                contextMenu.style.top  = '0px';
-                contextMenu.classList.remove('hidden');
-
-                const menuW = contextMenu.offsetWidth;
-                const menuH = contextMenu.offsetHeight;
-
-                contextMenu.classList.add('hidden');
-                contextMenu.style.visibility = '';
-
-                const viewW = window.innerWidth;
-                const viewH = window.innerHeight;
-
-                // Flip horizontally if overflows right
-                let left = clientX;
-                if (clientX + menuW + 12 > viewW) {
-                    left = clientX - menuW;
-                }
-                // Clamp left
-                left = Math.max(8, left);
-
-                // Flip vertically if overflows bottom
-                let top = clientY;
-                if (clientY + menuH + 12 > viewH) {
-                    top = clientY - menuH;
-                }
-                // Clamp top
-                top = Math.max(8, top);
-
-                contextMenu.style.left = `${left}px`;
-                contextMenu.style.top  = `${top}px`;
-                contextMenu.classList.remove('hidden');
-            }
-
-            function triggerContextMenu(row, clientX, clientY) {
-                const id = row.dataset.id;
-                const bezeichnung = row.dataset.bezeichnung;
-                const geraet = row.dataset.geraet;
-                const lieferant = row.dataset.lieferant;
-                const ek = row.dataset.ek;
-                const vk = row.dataset.vk;
-                const alteNr = row.dataset.alteNr;
-                const neueNr = row.dataset.neueNr;
-                const stueckzahl = parseInt(row.dataset.stueckzahl);
-                const kommentar = row.dataset.kommentar;
-
-                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                alpineData.selectedItem = {
-                    id, bezeichnung, geraet, lieferant,
-                    ek_ohne_st: ek, vk_ohne_st: vk,
-                    alte_artikelnummer: alteNr, neue_artikelnummer: neueNr,
-                    stueckzahl, kommentar
-                };
-
-                positionContextMenu(clientX, clientY);
-            }
-
-            let touchTimeout = null;
-            let touchStartX = 0;
-            let touchStartY = 0;
-            const LONG_PRESS_DURATION = 600; // ms
-
-            document.querySelectorAll('.cursor-context-menu').forEach(row => {
-                row.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    triggerContextMenu(row, e.clientX, e.clientY);
-                });
-
-                row.addEventListener('touchstart', (e) => {
-                    if (e.touches.length !== 1) return;
-                    const touch = e.touches[0];
-                    touchStartX = touch.clientX;
-                    touchStartY = touch.clientY;
-
-                    touchTimeout = setTimeout(() => {
-                        e.preventDefault();
-                        triggerContextMenu(row, touchStartX, touchStartY);
-                    }, LONG_PRESS_DURATION);
-                }, { passive: false });
-
-                row.addEventListener('touchmove', (e) => {
-                    if (touchTimeout) {
-                        const touch = e.touches[0];
-                        if (Math.abs(touch.clientX - touchStartX) > 10 || Math.abs(touch.clientY - touchStartY) > 10) {
-                            clearTimeout(touchTimeout);
-                            touchTimeout = null;
-                        }
-                    }
-                });
-
-                row.addEventListener('touchend', () => {
-                    if (touchTimeout) {
-                        clearTimeout(touchTimeout);
-                        touchTimeout = null;
-                    }
-                });
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#custom-context-menu')) {
-                    contextMenu.classList.add('hidden');
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    contextMenu.classList.add('hidden');
-                }
-            });
-
-
-            // Client-Side Instant Filtering
-            const searchInput = document.querySelector('input[name="search"]');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    const query = this.value.toLowerCase().trim();
-                    const rows = document.querySelectorAll('.cursor-context-menu');
-                    
-                    rows.forEach(row => {
-                        const bezeichnung = (row.dataset.bezeichnung || '').toLowerCase();
-                        const geraet = (row.dataset.geraet || '').toLowerCase();
-                        const lieferant = (row.dataset.lieferant || '').toLowerCase();
-                        const alteNr = (row.dataset.alteNr || '').toLowerCase();
-                        const neueNr = (row.dataset.neueNr || '').toLowerCase();
-                        
-                        const matches = bezeichnung.includes(query) ||
-                                        geraet.includes(query) ||
-                                        lieferant.includes(query) ||
-                                        alteNr.includes(query) ||
-                                        neueNr.includes(query);
-                                        
-                        if (matches) {
-                            row.style.display = '';
-                        } else {
-                            row.style.display = 'none';
-                        }
-                    });
-                });
-            }
-
-            // Global helper functions
-            window.renderGlobalZoomQR = function() {
-                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                const neueNr = alpineData.selectedItem.neue_artikelnummer;
-                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
-                
-                setTimeout(() => {
-                    const canvas = document.getElementById('global-zoom-qr');
-                    if (canvas) {
-                        new QRious({
-                            element: canvas,
-                            value: targetUrl,
-                            size: 180,
-                            background: '#ffffff',
-                            foreground: '#000000',
-                            level: 'H'
-                        });
-                    }
-                }, 50);
-            };
-
-            window.renderDetailQR = function() {
-                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                const neueNr = alpineData.selectedItem.neue_artikelnummer;
-                if (!neueNr) return;
-                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
-                
-                setTimeout(() => {
-                    const canvas = document.getElementById('detail-qr-canvas');
-                    if (canvas) {
-                        new QRious({
-                            element: canvas,
-                            value: targetUrl,
-                            size: 96,
-                            padding: 0,
-                            background: '#ffffff',
-                            foreground: '#000000',
-                            level: 'H'
-                        });
-                    }
-                }, 50);
-            };
-
-            window.renderPrintQR = function() {
-                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                const neueNr = alpineData.selectedItem.neue_artikelnummer;
-                if (!neueNr) return;
-                const size = alpineData.printSize;
-                const qrSize = size === 'small' ? 80 : 120;
-                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
-                
-                setTimeout(() => {
-                    const canvas = document.getElementById('print-label-qr');
-                    if (canvas) {
-                        new QRious({
-                            element: canvas,
-                            value: targetUrl,
-                            size: qrSize,
-                            background: '#ffffff',
-                            foreground: '#000000',
-                            level: 'H'
-                        });
-                    }
-                }, 50);
-            };
-
-            window.printLabel = function(neueNr, size) {
-                // Gather Alpine state
-                const alpineData = Alpine.$data(document.querySelector('[x-data]'));
-                const item = alpineData.selectedItem;
-                const fields = alpineData.printFields;
-
-                // Label dimensions (matching CSS preview sizes)
-                const labelW = size === 'small' ? 320 : 480;
-                const labelH = size === 'small' ? 180 : 300;
-                const qrSize = size === 'small' ? 80 : 120;
-                const padding = size === 'small' ? 14 : 22;
-
-                // Generate QR code as data URL via a temp canvas
-                const tmpCanvas = document.createElement('canvas');
-                const targetUrl = `{{ route('sck.lager.artikel', '') }}/${neueNr}`;
-                new QRious({
-                    element: tmpCanvas,
-                    value: targetUrl,
-                    size: qrSize,
-                    background: '#ffffff',
-                    foreground: '#000000',
-                    level: 'H'
-                });
-                const qrDataUrl = tmpCanvas.toDataURL('image/png');
-
-                // Build field rows HTML
-                let fieldsHtml = '';
-                if (fields.geraet && item.geraet)      fieldsHtml += `<div class="field-row"><b>Kat:</b> ${esc(item.geraet)}</div>`;
-                if (fields.lieferant && item.lieferant) fieldsHtml += `<div class="field-row"><b>Lief:</b> ${esc(item.lieferant)}</div>`;
-                if (fields.ek && item.ek_ohne_st)       fieldsHtml += `<div class="field-row"><b>EK:</b> ${esc(item.ek_ohne_st)} €</div>`;
-                if (fields.vk && item.vk_ohne_st)       fieldsHtml += `<div class="field-row"><b>VK:</b> ${esc(item.vk_ohne_st)} €</div>`;
-                if (fields.alte_nr && item.alte_artikelnummer) fieldsHtml += `<div class="field-row"><b>Alt:</b> ${esc(item.alte_artikelnummer)}</div>`;
-                if (fields.neue_nr)                     fieldsHtml += `<div class="field-row"><b>Neu:</b> ${esc(item.neue_artikelnummer)}</div>`;
-                let kommentarHtml = '';
-                if (fields.kommentar && item.kommentar) {
-                    kommentarHtml = `<div style="border-top:1px solid #ccc;padding-top:4px;margin-top:4px;font-size:8px;color:#555;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(item.kommentar)}</div>`;
-                }
-
-                const titleFontSize = size === 'small' ? '13px' : '18px';
-                const fieldFontSize = size === 'small' ? '9px'  : '11px';
-
-                const html = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<title>Label: ${esc(item.bezeichnung)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;900&display=swap" rel="stylesheet">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  @page {
-    size: ${labelW}px ${labelH}px;
-    margin: 0;
-  }
-  body {
-    width: ${labelW}px;
-    height: ${labelH}px;
-    font-family: 'Figtree', Arial, sans-serif;
-    background: white;
-    color: black;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .label {
-    width: ${labelW}px;
-    height: ${labelH}px;
-    padding: ${padding}px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    overflow: hidden;
-  }
-  .qr-wrap {
-    flex-shrink: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    padding: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .qr-wrap img {
-    display: block;
-    width: ${qrSize}px;
-    height: ${qrSize}px;
-  }
-  .info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 100%;
-    overflow: hidden;
-    min-width: 0;
-  }
-  .title {
-    font-size: ${titleFontSize};
-    font-weight: 900;
-    line-height: 1.2;
-    color: #000;
-    word-break: break-word;
-  }
-  .fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px 8px;
-    margin-top: 5px;
-  }
-  .field-row {
-    font-size: ${fieldFontSize};
-    color: #374151;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .field-row b {
-    font-weight: 700;
-    color: #111;
-  }
-</style>
-</head>
-<body>
-<div class="label">
-  <div class="qr-wrap">
-    <img src="${qrDataUrl}" alt="QR Code">
-  </div>
-  <div class="info">
-    <div>
-      <div class="title">${esc(item.bezeichnung)}</div>
-      <div class="fields">${fieldsHtml}</div>
+            <!-- Modal Footer (Pagination) -->
+            <div class="px-6 py-4 border-t border-gray-850 flex flex-col sm:flex-row items-center justify-between bg-gray-950/45 text-xs gap-3">
+                <span class="text-gray-500" x-text="`Eintrag ${(historyPage-1)*historyPerPage + 1} - ${Math.min(historyPage*historyPerPage, filteredLogs.length)} von ${filteredLogs.length}`"></span>
+                <div class="flex items-center space-x-1">
+                    <button @click="if(historyPage > 1) historyPage--" 
+                            :disabled="historyPage === 1"
+                            class="px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:border-gray-800 transition-colors">
+                        Zurück
+                    </button>
+                    <span class="px-3 text-gray-400 font-bold" x-text="`${historyPage} / ${totalPages}`"></span>
+                    <button @click="if(historyPage < totalPages) historyPage++" 
+                            :disabled="historyPage === totalPages"
+                            class="px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:border-gray-800 transition-colors">
+                        Weiter
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-    ${kommentarHtml}
-  </div>
-</div>
-<script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };<\/script>
-</body>
-</html>`;
 
-                function esc(str) {
-                    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                }
+    <!-- DATEV Invoice Upload & Verification Modal -->
+    <div x-show="openInvoiceModal" class="fixed inset-0 z-50 overflow-y-auto" x-cloak>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="openInvoiceModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 transition-opacity bg-gray-950/85 backdrop-blur-md" @click="openInvoiceModal = false"></div>
 
-                const win = window.open('', '_blank', `width=${labelW + 40},height=${labelH + 120},menubar=no,toolbar=no,status=no`);
-                if (win) {
-                    win.document.write(html);
-                    win.document.close();
-                } else {
-                    alert('Bitte erlauben Sie Pop-ups für diese Seite, um den Druckdialog zu öffnen.');
-                }
-            };
-        });
-    </script>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div x-show="openInvoiceModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full max-w-6xl p-6 sm:p-8 my-8 overflow-hidden text-left align-middle transition-all transform glass-panel border border-slate-200 dark:border-gray-800/90 rounded-3xl shadow-2xl bg-white dark:bg-gray-900/95 text-slate-800 dark:text-gray-100">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between pb-6 border-b border-slate-200 dark:border-gray-800/80">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                            <i class="fa-solid fa-file-invoice text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-black text-slate-900 dark:text-gray-100 tracking-tight">DATEV Rechnung / Beleg verbuchen</h3>
+                            <p class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">Automatische Artikel- und Bestandsanalyse mit Prüfung & Abgleich</p>
+                        </div>
+                    </div>
+                    <button @click="openInvoiceModal = false" class="text-slate-400 hover:text-slate-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-800/60">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Error Alert -->
+                <div x-show="invoiceError" class="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm flex items-start space-x-3" x-cloak>
+                    <i class="fa-solid fa-triangle-exclamation text-rose-500 dark:text-rose-400 text-lg mt-0.5"></i>
+                    <div class="flex-1" x-text="invoiceError"></div>
+                </div>
+
+                <!-- STEP 1: Upload Step -->
+                <div x-show="invoiceStep === 'upload'" class="py-12 text-center space-y-6">
+                    <div class="max-w-lg mx-auto p-10 border-2 border-dashed border-slate-300 dark:border-gray-700/80 hover:border-emerald-500/60 rounded-3xl bg-slate-50/50 dark:bg-gray-950/50 transition-all shadow-inner">
+                        <i class="fa-solid fa-file-pdf text-6xl text-emerald-500 dark:text-emerald-400 mb-4 animate-bounce"></i>
+                        <h4 class="text-xl font-bold text-slate-900 dark:text-gray-100">DATEV-Rechnung (PDF) auswählen</h4>
+                        <p class="text-xs text-slate-500 dark:text-gray-400 mt-1 mb-6">Ziehen Sie die PDF-Datei hierher oder klicken Sie zum Auswählen</p>
+                        
+                        <label class="btn-neon-emerald cursor-pointer text-white px-6 py-3 rounded-2xl text-sm font-black inline-flex items-center space-x-2.5 transition-all shadow-lg shadow-emerald-600/20 hover:scale-105">
+                            <i class="fa-solid fa-upload"></i>
+                            <span>PDF auswählen & analysieren</span>
+                            <input type="file" accept=".pdf" class="hidden" @change="uploadAndParseInvoice($event)">
+                        </label>
+                    </div>
+
+                    <div class="text-xs text-slate-600 dark:text-gray-400 max-w-xl mx-auto bg-slate-50 dark:bg-gray-950/40 p-5 rounded-2xl border border-slate-200 dark:border-gray-800/80 text-left space-y-2">
+                        <div class="font-bold text-slate-800 dark:text-gray-300 flex items-center gap-2 text-sm">
+                            <i class="fa-solid fa-shield-halved text-cyan-600 dark:text-cyan-400"></i>
+                            <span>Funktionsweise des automatischen Abgleichs</span>
+                        </div>
+                        <p class="text-slate-600 dark:text-gray-400 leading-relaxed text-xs">
+                            Das System liest Artikelbezeichnung, Artikelnummer, Mengeneinheiten und Nettopreise aus. Korrekte Treffer werden grün verifiziert. Ähnliche Treffer werden gelb markiert und nicht gefundene Artikel können direkt mit vorausgefüllten Werten angelegt werden.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Loading Step -->
+                <div x-show="invoiceStep === 'loading'" class="py-20 text-center space-y-4">
+                    <div class="inline-block animate-spin w-14 h-14 border-4 border-emerald-500 border-t-transparent rounded-full mb-3 shadow-lg shadow-emerald-500/20"></div>
+                    <h4 class="text-xl font-bold text-slate-900 dark:text-gray-100">DATEV-Rechnung wird analysiert...</h4>
+                    <p class="text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-4 py-1.5 rounded-full inline-block border border-emerald-200 dark:border-emerald-800/50" x-text="invoiceFileName"></p>
+                </div>
+
+                <!-- STEP 3: Review & Submit Step -->
+                <div x-show="invoiceStep === 'review' && invoiceData" class="py-6 space-y-6">
+                    
+                    <!-- Invoice Summary Metadata Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        
+                        <!-- Card 1: Rechnungs-Nr -->
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-gray-950/60 border border-slate-200 dark:border-gray-800/80 flex items-center space-x-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold shadow-inner">
+                                <i class="fa-solid fa-hashtag"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-500 dark:text-gray-400 uppercase font-black tracking-wider block">Rechnungs-Nr.</span>
+                                <p class="font-black text-emerald-600 dark:text-emerald-400 text-sm" x-text="invoiceData?.invoice_info?.number || 'Ohne Nummer'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Belegdatum -->
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-gray-950/60 border border-slate-200 dark:border-gray-800/80 flex items-center space-x-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-sm font-bold shadow-inner">
+                                <i class="fa-solid fa-calendar-day"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-500 dark:text-gray-400 uppercase font-black tracking-wider block">Belegdatum</span>
+                                <p class="font-bold text-slate-800 dark:text-gray-200 text-sm" x-text="invoiceData?.invoice_info?.date || '-'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Kundennummer -->
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-gray-950/60 border border-slate-200 dark:border-gray-800/80 flex items-center space-x-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm font-bold shadow-inner">
+                                <i class="fa-solid fa-user-tag"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-500 dark:text-gray-400 uppercase font-black tracking-wider block">Kundennummer</span>
+                                <p class="font-bold text-slate-800 dark:text-gray-200 text-sm" x-text="invoiceData?.invoice_info?.customer_number || '-'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Status / Debug Toggle -->
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-gray-950/60 border border-slate-200 dark:border-gray-800/80 flex items-center justify-between gap-2 min-w-0">
+                            <div class="shrink-0">
+                                <span class="px-3 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap inline-block" :class="(invoiceData?.items?.length || 0) > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'" x-text="(invoiceData?.items?.length || 0) + ' Artikel erkannt'"></span>
+                            </div>
+                            <button type="button" @click="showInvoiceDebug = !showInvoiceDebug" title="Debug-Log & Rohtext anzeigen" :class="showInvoiceDebug ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/50' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 border-slate-300 dark:border-gray-700'" class="px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center space-x-1.5 transition-all shadow-sm shrink-0">
+                                <i class="fa-solid fa-bug text-cyan-600 dark:text-cyan-400 text-sm"></i>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white dark:bg-gray-950 text-cyan-800 dark:text-cyan-300 font-mono border border-cyan-300 dark:border-cyan-900" x-text="invoiceData?.debug?.logs?.length || 0"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 0 Items Warning Banner -->
+                    <template x-if="!invoiceData?.items || invoiceData?.items?.length === 0">
+                        <div class="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-sm space-y-2">
+                            <div class="flex items-center space-x-2 font-bold text-base">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-500 dark:text-amber-400"></i>
+                                <span>Keine Artikel automatisch aus der PDF erkannt</span>
+                            </div>
+                            <p class="text-xs text-amber-800 dark:text-amber-200/80">
+                                Es konnten keine passenden Zeilenartikel extrahiert werden. Sie können den extrahierten Rohtext und die Log-Meldungen unten prüfen, um das PDF-Format einzusehen.
+                            </p>
+                            <button type="button" @click="showInvoiceDebug = true" class="px-4 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold border border-amber-500/40 inline-flex items-center space-x-1.5 transition-colors mt-1">
+                                <i class="fa-solid fa-bug"></i>
+                                <span>Debug-Log jetzt anzeigen</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- Debug Logs & Raw Text Section -->
+                    <div x-show="showInvoiceDebug" x-transition class="border border-cyan-500/30 rounded-2xl p-5 bg-slate-900 dark:bg-gray-950/90 text-white space-y-4 shadow-inner" x-cloak>
+                        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <div class="flex items-center space-x-2 text-cyan-400 font-bold text-sm">
+                                <i class="fa-solid fa-terminal"></i>
+                                <span>PDF Parser Debug & Rohtext Analyse</span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <button type="button" @click="invoiceDebugTab = 'logs'" :class="invoiceDebugTab === 'logs' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50' : 'bg-gray-800 text-gray-400 border-transparent'" class="px-3 py-1 rounded-lg text-xs font-bold border transition-colors">
+                                    <i class="fa-solid fa-list-check mr-1"></i> Parser Logs (<span x-text="invoiceData?.debug?.logs?.length || 0"></span>)
+                                </button>
+                                <button type="button" @click="invoiceDebugTab = 'rawtext'" :class="invoiceDebugTab === 'rawtext' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50' : 'bg-gray-800 text-gray-400 border-transparent'" class="px-3 py-1 rounded-lg text-xs font-bold border transition-colors">
+                                    <i class="fa-solid fa-file-lines mr-1"></i> Extrahierter Rohtext (<span x-text="invoiceData?.debug?.line_count || 0"></span> Zeilen)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tab 1: Debug Logs -->
+                        <div x-show="invoiceDebugTab === 'logs'" class="space-y-1.5 max-h-64 overflow-y-auto font-mono text-xs pr-1">
+                            <template x-for="(logLine, lIdx) in (invoiceData?.debug?.logs || [])" :key="lIdx">
+                                <div class="p-2.5 rounded-xl bg-gray-900 border border-gray-800/80 text-gray-300 flex items-start space-x-2.5">
+                                    <span class="text-cyan-500 select-none font-bold min-w-[28px]" x-text="'[' + (lIdx + 1) + ']'"></span>
+                                    <span class="break-all" :class="{
+                                        'text-emerald-400 font-bold': logLine.includes('SUCCESS') || logLine.includes('MATCH'),
+                                        'text-cyan-300': logLine.includes('STRATEGY') || logLine.includes('PARSER') || logLine.includes('TIER'),
+                                        'text-amber-400 font-bold': logLine.includes('FAILED') || logLine.includes('Not found') || logLine.includes('not_found'),
+                                        'text-gray-300': !logLine.includes('SUCCESS') && !logLine.includes('STRATEGY') && !logLine.includes('FAILED')
+                                    }" x-text="logLine"></span>
+                                </div>
+                            </template>
+                            <template x-if="!invoiceData?.debug?.logs || invoiceData?.debug?.logs?.length === 0">
+                                <div class="text-gray-500 italic text-center py-4">Keine Log-Einträge vorhanden.</div>
+                            </template>
+                        </div>
+
+                        <!-- Tab 2: Raw Extracted PDF Text -->
+                        <div x-show="invoiceDebugTab === 'rawtext'" class="space-y-2">
+                            <div class="flex items-center justify-between text-xs text-gray-400">
+                                <span>Aus der PDF ausgelesener Text (Multi-Tier Parser Output):</span>
+                                <button type="button" @click="navigator.clipboard.writeText(invoiceData?.debug?.raw_text || '')" class="text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1 transition-colors">
+                                    <i class="fa-solid fa-copy"></i>
+                                    <span>Rohtext kopieren</span>
+                                </button>
+                            </div>
+                            <pre class="bg-gray-900 border border-gray-800 p-4 rounded-2xl text-emerald-400 font-mono text-xs max-h-64 overflow-y-auto whitespace-pre-wrap break-all select-all leading-relaxed" x-text="invoiceData?.debug?.raw_text || 'Kein Rohtext extrahiert.'"></pre>
+                        </div>
+                    </div>
+
+                    <!-- Line Items Table -->
+                    <div class="overflow-x-auto border border-slate-200 dark:border-gray-800/90 rounded-3xl max-h-[28rem] overflow-y-auto shadow-inner bg-slate-50/40 dark:bg-gray-950/40">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 dark:bg-gray-950 text-slate-700 dark:text-gray-400 sticky top-0 border-b border-slate-200 dark:border-gray-800 uppercase font-black tracking-wider z-10">
+                                <tr>
+                                    <th class="py-4 px-5 w-5/12">Artikel (Rechnung & Lager)</th>
+                                    <th class="py-4 px-5 text-center w-3/12">Status / Zuordnung</th>
+                                    <th class="py-4 px-4 text-center w-2/12">Menge</th>
+                                    <th class="py-4 px-5 text-right w-2/12">Preis-Check (Netto)</th>
+                                    <th class="py-4 px-5 text-center w-2/12">Bestand-Vorschau</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-gray-800/60 bg-white dark:bg-gray-900/50">
+                                <template x-for="(item, idx) in (invoiceData?.items || [])" :key="idx">
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors">
+                                        
+                                        <!-- Article Info -->
+                                        <td class="py-4 px-5">
+                                            <div class="font-bold text-slate-900 dark:text-gray-100 text-sm leading-snug" x-text="item.invoice_bezeichnung"></div>
+                                            <div class="text-[11px] text-slate-500 dark:text-gray-400 flex items-center space-x-2.5 mt-1">
+                                                <span class="bg-slate-100 dark:bg-gray-950 px-2 py-0.5 rounded-md border border-slate-200 dark:border-gray-800 font-mono text-slate-700 dark:text-gray-300">Art.-Nr.: <strong class="text-emerald-600 dark:text-emerald-400" x-text="item.invoice_artikelnummer || 'Keine'"></strong></span>
+                                                <span class="bg-slate-100 dark:bg-gray-950 px-2 py-0.5 rounded-md border border-slate-200 dark:border-gray-800 font-mono text-slate-700 dark:text-gray-400">USt: <strong class="text-slate-800 dark:text-gray-300" x-text="item.invoice_ust + '%' "></strong></span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Status & Verification Badge -->
+                                        <td class="py-4 px-5 text-center">
+                                            
+                                            <!-- Exact Match -->
+                                            <template x-if="item.status === 'exact_match'">
+                                                <div class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold shadow-sm">
+                                                    <i class="fa-solid fa-circle-check"></i>
+                                                    <span>Im Lager verifiziert</span>
+                                                </div>
+                                            </template>
+
+                                            <!-- Fuzzy Match -->
+                                            <template x-if="item.status === 'fuzzy_match'">
+                                                <div class="flex flex-col items-center space-y-1.5">
+                                                    <div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-bold">
+                                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                                        <span x-text="'Ähnlicher Treffer (' + item.similarity_percent + '%)'"></span>
+                                                    </div>
+                                                    <div class="text-[10px] text-slate-500 dark:text-gray-400 font-medium" x-text="'Zugewiesen: ' + (item.matched_item?.bezeichnung || '')"></div>
+                                                    <button type="button" @click="prefillAddModalFromInvoiceItem(item)" class="text-[11px] text-cyan-600 dark:text-cyan-400 hover:underline font-bold flex items-center space-x-1">
+                                                        <i class="fa-solid fa-circle-plus"></i>
+                                                        <span>Falscher Treffer? Als neu anlegen</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+
+                                            <!-- Not Found -->
+                                            <template x-if="item.status === 'not_found'">
+                                                <div class="flex items-center justify-center space-x-2">
+                                                    <span class="px-3 py-1 rounded-xl bg-rose-500/10 text-rose-700 dark:text-red-400 border border-rose-500/30 text-xs font-bold flex items-center space-x-1">
+                                                        <i class="fa-solid fa-xmark"></i>
+                                                        <span>Nicht gefunden</span>
+                                                    </span>
+                                                    <button type="button" @click="prefillAddModalFromInvoiceItem(item)" class="bg-cyan-600 hover:bg-cyan-500 dark:from-cyan-600 dark:to-blue-600 text-white px-3 py-1 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all shadow-md shadow-cyan-600/20 hover:scale-105">
+                                                        <i class="fa-solid fa-plus-circle"></i>
+                                                        <span>Artikel anlegen</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </td>
+
+                                        <!-- Quantity Input -->
+                                        <td class="py-4 px-4 text-center">
+                                            <div class="inline-flex items-center justify-center space-x-1.5">
+                                                <input type="number" min="1" x-model.number="item.quantity" class="w-20 sck-input text-center py-1.5 text-xs font-black rounded-xl border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-slate-900 dark:text-gray-100">
+                                                <span class="text-slate-500 dark:text-gray-400 text-xs font-medium" x-text="item.invoice_einheit"></span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Price Check & Option -->
+                                        <td class="py-4 px-5 text-right">
+                                            <div class="font-black text-slate-900 dark:text-gray-100 text-sm" x-text="item.invoice_netto_preis.toFixed(2) + ' €'"></div>
+                                            
+                                            <template x-if="item.matched_item && item.price_match">
+                                                <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-end space-x-1 mt-1">
+                                                    <i class="fa-solid fa-check text-[10px]"></i>
+                                                    <span>EK identisch</span>
+                                                </div>
+                                            </template>
+
+                                            <template x-if="item.matched_item && !item.price_match">
+                                                <div class="mt-1 space-y-1">
+                                                    <div class="text-[10px] text-amber-600 dark:text-amber-400 font-bold" x-text="'Lager EK: ' + item.matched_item.ek_ohne_st.toFixed(2) + ' €'"></div>
+                                                    <label class="inline-flex items-center space-x-1 cursor-pointer text-[10px] text-cyan-600 dark:text-cyan-300 hover:text-cyan-500">
+                                                        <input type="checkbox" x-model="item.update_price" class="rounded border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-cyan-500 text-[10px]">
+                                                        <span>Lager EK auf <strong x-text="item.invoice_netto_preis.toFixed(2) + ' €'"></strong> anpassen</span>
+                                                    </label>
+                                                </div>
+                                            </template>
+                                        </td>
+
+                                        <!-- Stock Projection -->
+                                        <td class="py-4 px-5 text-center">
+                                            <template x-if="item.matched_item">
+                                                <div>
+                                                    <div class="text-xs font-bold text-slate-800 dark:text-gray-200 font-mono bg-slate-100 dark:bg-gray-950 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-gray-800 inline-block" x-text="item.matched_item.stueckzahl + ' → ' + Math.max(0, item.matched_item.stueckzahl - item.quantity) + ' Stk.'"></div>
+                                                    <template x-if="(item.matched_item.stueckzahl - item.quantity) < 0">
+                                                        <span class="text-[9px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-tight block mt-1">Bestand negativ</span>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <template x-if="!item.matched_item">
+                                                <span class="text-slate-400 dark:text-gray-500 text-xs font-mono">-</span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Modal Actions Bar -->
+                    <div class="flex items-center justify-between pt-6 border-t border-slate-200 dark:border-gray-800/80">
+                        <button type="button" @click="invoiceStep = 'upload'" class="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-300 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border border-slate-300 dark:border-gray-700/50 flex items-center space-x-2">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>Andere Datei wählen</span>
+                        </button>
+
+                        <div class="flex items-center space-x-3">
+                            <button type="button" @click="openInvoiceModal = false" class="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-300 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border border-slate-300 dark:border-gray-700/50">
+                                Abbrechen
+                            </button>
+
+                            <button type="button" @click="submitInvoiceDeduction()" :disabled="isSubmittingInvoiceDeduction || !invoiceData?.items?.some(i => i.selected_item_id)" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white px-7 py-3 rounded-2xl text-sm font-black flex items-center space-x-2.5 transition-colors shadow-lg shadow-emerald-600/20 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                                <template x-if="!isSubmittingInvoiceDeduction">
+                                    <span class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-check-circle text-base"></i>
+                                        <span>Bestand jetzt automatisch abziehen & buchen</span>
+                                    </span>
+                                </template>
+                                <template x-if="isSubmittingInvoiceDeduction">
+                                    <span class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-spinner animate-spin text-base"></i>
+                                        <span>Bestand wird abgezogen...</span>
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    
 </div>
 @endsection

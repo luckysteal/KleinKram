@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base cloak for Alpine.js elements before init */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Custom variables, layouts, animations, and tooltips for the SCK App */
 :root {
     --bg-dark-900: #0a0e17;
@@ -31,63 +36,60 @@
 
 /* ─── Light Theme ─────────────────────────────────────────────── */
 html[data-theme="light"] {
-    --glass-bg:    rgba(255, 255, 255, 0.88);
-    --glass-border: rgba(30, 41, 59, 0.1);
+    --glass-bg:    rgba(255, 255, 255, 0.94);
+    --glass-border: rgba(30, 41, 59, 0.12);
 
-    --sck-body-bg:        #eef2f7;
+    --sck-body-bg:        #f1f5f9;
     --sck-body-color:     #1e293b;
-    --sck-input-bg:       rgba(241, 245, 249, 0.95);
+    --sck-input-bg:       #ffffff;
     --sck-input-border:   rgba(30, 41, 59, 0.22);
-    --sck-input-color:    #1e293b;
+    --sck-input-color:    #0f172a;
     --sck-ctx-bg:         rgba(255, 255, 255, 0.98);
     --sck-ctx-border:     rgba(6, 182, 212, 0.35);
     --sck-ctx-color:      #334155;
     --sck-ctx-hover-bg:   rgba(6, 182, 212, 0.1);
     --sck-ctx-hover-color:#0891b2;
-    --sck-ctx-divider:    rgba(0, 0, 0, 0.07);
+    --sck-ctx-divider:    rgba(0, 0, 0, 0.08);
     --sck-tooltip-bg:     #1e293b;
     --sck-tooltip-color:  #f8fafc;
 }
 
-/* Light mode body + transitions */
-html[data-theme="light"] body.sck-theme {
-    background-color: var(--sck-body-bg);
-    color: var(--sck-body-color);
-}
-
-/* Smooth theme transitions on key elements */
-body.sck-theme,
-.glass-panel,
-.sck-input,
-header,
-footer,
-.context-menu {
-    transition: background-color 0.25s ease, color 0.2s ease,
-                border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
+/* Base Body + transitions */
 body.sck-theme {
     background-color: var(--sck-body-bg);
     color: var(--sck-body-color);
-    font-family: 'Figtree', sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-[x-cloak] {
-    display: none !important;
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3,
+html[data-theme="light"] h4 {
+    color: #0f172a;
 }
 
-/* Glassmorphism panels */
+/* Base Glassmorphism panels */
 .glass-panel {
     background: var(--glass-bg);
+    border-color: var(--glass-border);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+}
+
+.glass-panel-hover {
+    transition: all 0.2s ease;
 }
 
 .glass-panel-hover:hover {
-    background: rgba(17, 24, 39, 0.85);
-    border-color: rgba(6, 182, 212, 0.25);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    background: rgba(31, 41, 55, 0.8);
+    border-color: rgba(6, 182, 212, 0.3);
+}
+
+/* Glassmorphism panels in light mode */
+html[data-theme="light"] .glass-panel {
+    background: rgba(255, 255, 255, 0.94);
+    border-color: rgba(30, 41, 59, 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 html[data-theme="light"] .glass-panel-hover:hover {
@@ -97,249 +99,285 @@ html[data-theme="light"] .glass-panel-hover:hover {
 }
 
 /* ── Light mode Tailwind overrides ─────────────────────────────── */
+html[data-theme="light"] .text-gray-50   { color: #0f172a !important; }
+html[data-theme="light"] .text-gray-100  { color: #0f172a !important; }
 html[data-theme="light"] .text-gray-200  { color: #1e293b !important; }
 html[data-theme="light"] .text-gray-300  { color: #334155 !important; }
 html[data-theme="light"] .text-gray-400  { color: #475569 !important; }
 html[data-theme="light"] .text-gray-500  { color: #64748b !important; }
 html[data-theme="light"] .text-gray-600  { color: #475569 !important; }
+html[data-theme="light"] .text-gray-700  { color: #334155 !important; }
 
-html[data-theme="light"] .border-gray-800  { border-color: rgba(30,41,59,0.15) !important; }
-html[data-theme="light"] .border-gray-850  { border-color: rgba(30,41,59,0.1) !important; }
+/* High-contrast accent colors for Light Mode */
+html[data-theme="light"] .text-cyan-400    { color: #0891b2 !important; }
+html[data-theme="light"] .text-cyan-300    { color: #0e7490 !important; }
+html[data-theme="light"] .text-cyan-200    { color: #155e75 !important; }
+html[data-theme="light"] .text-purple-400  { color: #7c3aed !important; }
+html[data-theme="light"] .text-purple-300  { color: #6d28d9 !important; }
+html[data-theme="light"] .text-emerald-400 { color: #059669 !important; }
+html[data-theme="light"] .text-emerald-300 { color: #047857 !important; }
+html[data-theme="light"] .text-amber-400   { color: #d97706 !important; }
+html[data-theme="light"] .text-amber-300   { color: #b45309 !important; }
+html[data-theme="light"] .text-rose-400    { color: #dc2626 !important; }
+html[data-theme="light"] .text-rose-300    { color: #b91c1c !important; }
+html[data-theme="light"] .text-red-400     { color: #dc2626 !important; }
 
-html[data-theme="light"] .bg-gray-800   { background-color: #e2e8f0 !important; }
-html[data-theme="light"] .bg-gray-900   { background-color: #f1f5f9 !important; }
-html[data-theme="light"] .bg-gray-950   { background-color: #f8fafc !important; }
-html[data-theme="light"] .bg-gray-900\/30 { background-color: rgba(241,245,249,0.6) !important; }
-html[data-theme="light"] .bg-gray-900\/60 { background-color: rgba(241,245,249,0.85) !important; }
-html[data-theme="light"] .bg-gray-900\/40 { background-color: rgba(241,245,249,0.7) !important; }
-html[data-theme="light"] .bg-gray-950\/45 { background-color: rgba(241,245,249,0.8) !important; }
-html[data-theme="light"] .bg-gray-950\/65 { background-color: rgba(248,250,252,0.9) !important; }
-html[data-theme="light"] .bg-gray-950\/40 { background-color: rgba(248,250,252,0.8) !important; }
-html[data-theme="light"] .bg-gray-950\/20 { background-color: rgba(241,245,249,0.6) !important; }
+/* Text Hovers */
+html[data-theme="light"] [class*="hover:text-cyan-400"]:hover   { color: #0891b2 !important; }
+html[data-theme="light"] [class*="hover:text-cyan-300"]:hover   { color: #0e7490 !important; }
+html[data-theme="light"] [class*="hover:text-purple-400"]:hover { color: #7c3aed !important; }
+html[data-theme="light"] [class*="hover:text-emerald-400"]:hover{ color: #059669 !important; }
+html[data-theme="light"] [class*="hover:text-gray-200"]:hover   { color: #0f172a !important; }
+html[data-theme="light"] [class*="hover:text-gray-300"]:hover   { color: #0f172a !important; }
 
-html[data-theme="light"] .hover\:bg-gray-700:hover { background-color: #cbd5e1 !important; }
-html[data-theme="light"] .hover\:bg-gray-900\/30:hover { background-color: rgba(6,182,212,0.06) !important; }
+/* Borders in Light Mode */
+html[data-theme="light"] .border-gray-700    { border-color: rgba(30, 41, 59, 0.18) !important; }
+html[data-theme="light"] .border-gray-750    { border-color: rgba(30, 41, 59, 0.15) !important; }
+html[data-theme="light"] .border-gray-800    { border-color: rgba(30, 41, 59, 0.15) !important; }
+html[data-theme="light"] .border-gray-850    { border-color: rgba(30, 41, 59, 0.1) !important; }
+html[data-theme="light"] .border-gray-900    { border-color: rgba(30, 41, 59, 0.1) !important; }
+html[data-theme="light"] .border-gray-950    { border-color: rgba(30, 41, 59, 0.1) !important; }
+html[data-theme="light"] [class*="border-gray-800/80"] { border-color: rgba(30, 41, 59, 0.12) !important; }
+html[data-theme="light"] [class*="border-gray-850/40"] { border-color: rgba(30, 41, 59, 0.08) !important; }
+html[data-theme="light"] .divide-gray-800 > * + * { border-color: rgba(30, 41, 59, 0.1) !important; }
+html[data-theme="light"] .divide-gray-850 > * + * { border-color: rgba(30, 41, 59, 0.08) !important; }
 
-html[data-theme="light"] .divide-gray-800 > * + * { border-color: rgba(226,232,240,0.9) !important; }
+/* Backgrounds in Light Mode */
+html[data-theme="light"] .bg-gray-700,
+html[data-theme="light"] [class*="bg-gray-700/"]       { background-color: #cbd5e1 !important; }
+html[data-theme="light"] .bg-gray-800,
+html[data-theme="light"] [class*="bg-gray-800/"]       { background-color: #e2e8f0 !important; }
+html[data-theme="light"] .bg-gray-850,
+html[data-theme="light"] [class*="bg-gray-850/"]       { background-color: #f1f5f9 !important; }
+html[data-theme="light"] .bg-gray-900,
+html[data-theme="light"] [class*="bg-gray-900/"]       { background-color: #f8fafc !important; }
+html[data-theme="light"] .bg-gray-950,
+html[data-theme="light"] [class*="bg-gray-950/"]       { background-color: #ffffff !important; }
+html[data-theme="light"] [class*="bg-gray-900/30"]   { background-color: rgba(241, 245, 249, 0.6) !important; }
+html[data-theme="light"] [class*="bg-gray-900/40"]   { background-color: rgba(241, 245, 249, 0.7) !important; }
+html[data-theme="light"] [class*="bg-gray-900/60"]   { background-color: rgba(241, 245, 249, 0.85) !important; }
+html[data-theme="light"] [class*="bg-gray-900/80"]   { background-color: rgba(241, 245, 249, 0.9) !important; }
+html[data-theme="light"] [class*="bg-gray-900/95"]   { background-color: rgba(255, 255, 255, 0.97) !important; }
+html[data-theme="light"] [class*="bg-gray-950/20"]   { background-color: rgba(241, 245, 249, 0.6) !important; }
+html[data-theme="light"] [class*="bg-gray-950/30"]   { background-color: rgba(241, 245, 249, 0.7) !important; }
+html[data-theme="light"] [class*="bg-gray-950/40"]   { background-color: rgba(241, 245, 249, 0.8) !important; }
+html[data-theme="light"] [class*="bg-gray-950/45"]   { background-color: rgba(241, 245, 249, 0.85) !important; }
+html[data-theme="light"] [class*="bg-gray-950/50"]   { background-color: rgba(241, 245, 249, 0.85) !important; }
+html[data-theme="light"] [class*="bg-gray-950/60"]   { background-color: rgba(241, 245, 249, 0.88) !important; }
+html[data-theme="light"] [class*="bg-gray-950/65"]   { background-color: rgba(248, 250, 252, 0.9) !important; }
+html[data-theme="light"] [class*="bg-gray-950/80"]   { background-color: rgba(248, 250, 252, 0.92) !important; }
+html[data-theme="light"] [class*="bg-gray-950/85"]   { background-color: rgba(248, 250, 252, 0.92) !important; }
 
-/* ── Additional light mode fixes ────────────────────────────────── */
-
-/* Borders */
-html[data-theme="light"] .border-gray-850  { border-color: rgba(30,41,59,0.12) !important; }
-html[data-theme="light"] .border-gray-850\/40 { border-color: rgba(30,41,59,0.09) !important; }
-html[data-theme="light"] .border-gray-800\/80 { border-color: rgba(30,41,59,0.12) !important; }
-
-/* Product card header gradient overlay */
-html[data-theme="light"] .bg-gradient-to-r.from-cyan-600\/30 {
-    background: linear-gradient(to right, rgba(6,182,212,0.12), rgba(139,92,246,0.12)) !important;
-}
-
-/* Category / geraet badge — was cyan-950/80 (near black) */
-html[data-theme="light"] .bg-cyan-950\/80 {
-    background-color: rgba(6,182,212,0.12) !important;
-}
-html[data-theme="light"] .border-cyan-800\/40 {
-    border-color: rgba(6,182,212,0.35) !important;
-}
-
-/* System-Nr. box inside product card */
-html[data-theme="light"] .bg-gray-900.rounded-xl {
-    background-color: #f1f5f9 !important;
-}
-
-/* Stock panel bg */
-html[data-theme="light"] .bg-gray-950\/60 { background-color: rgba(241,245,249,0.85) !important; }
-
-/* ── Action buttons (Entnehmen / Auffüllen) ─────────────────────── */
-html[data-theme="light"] .bg-red-950\/40 {
-    background-color: rgba(239,68,68,0.1) !important;
-}
-html[data-theme="light"] .border-red-500\/20 {
-    border-color: rgba(239,68,68,0.35) !important;
-}
-html[data-theme="light"] .text-red-400 {
-    color: #dc2626 !important;
-}
-html[data-theme="light"] .bg-emerald-950\/40 {
-    background-color: rgba(16,185,129,0.1) !important;
-}
-html[data-theme="light"] .border-emerald-500\/20 {
-    border-color: rgba(16,185,129,0.35) !important;
-}
-html[data-theme="light"] .text-emerald-400 {
-    color: #059669 !important;
-}
-
-/* Edit button bg */
-html[data-theme="light"] .bg-gray-900:not(.rounded-xl) {
-    background-color: #f1f5f9 !important;
-}
-
-/* Modal header chrome */
-html[data-theme="light"] .bg-gray-950\/40 {
-    background-color: rgba(241,245,249,0.8) !important;
-}
-
-/* Modal cancel button */
-html[data-theme="light"] .bg-gray-800 {
+/* Table Header & Rows in Light Mode */
+html[data-theme="light"] thead tr,
+html[data-theme="light"] thead th {
     background-color: #e2e8f0 !important;
-}
-html[data-theme="light"] .hover\:bg-gray-700:hover {
-    background-color: #cbd5e1 !important;
-}
-html[data-theme="light"] .text-gray-300 {
     color: #334155 !important;
 }
 
-/* Show-page back-link + edit button border */
-html[data-theme="light"] .border-gray-800.hover\:border-cyan-500\/30 {
-    border-color: rgba(30,41,59,0.18) !important;
-}
-
-/* User-name chip border */
-html[data-theme="light"] .bg-gray-900\/60.border-gray-800 {
-    border-color: rgba(30,41,59,0.15) !important;
-}
-
-/* Dashed placeholder card */
-html[data-theme="light"] .border-dashed.border-gray-800 {
-    border-color: rgba(30,41,59,0.2) !important;
-}
-
-/* ── New article modal: template search box ──────────────────────── */
-html[data-theme="light"] .bg-cyan-950\/20 {
-    background-color: rgba(6,182,212,0.07) !important;
-}
-html[data-theme="light"] .border-cyan-800\/30 {
-    border-color: rgba(6,182,212,0.3) !important;
-}
-
-/* ── Label print modal: size toggle buttons (inactive state) ─────── */
-/* Alpine :class drives active/inactive; the inactive bg-gray-900 is
-   already caught by bg-gray-900:not(.rounded-xl). Override text too. */
-html[data-theme="light"] .bg-gray-900.border-gray-800.text-gray-400 {
-    background-color: #f1f5f9 !important;
-    border-color: rgba(30,41,59,0.18) !important;
-    color: #475569 !important;
-}
-html[data-theme="light"] .hover\:text-gray-200:hover {
-    color: #0f172a !important;
-}
-
-/* ── Label print modal: fields checkbox area ─────────────────────── */
-html[data-theme="light"] .bg-gray-950\/40 {
-    background-color: rgba(241,245,249,0.8) !important;
-}
-/* Checkbox labels text (already caught by text-gray-300, but for clarity) */
-html[data-theme="light"] label.text-gray-300 {
-    color: #334155 !important;
-}
-html[data-theme="light"] .text-gray-500 {
-    color: #64748b !important;
-}
-
-/* Checkbox inputs: force visible appearance in light mode */
-html[data-theme="light"] input[type="checkbox"] {
-    appearance: auto;
-    -webkit-appearance: auto;
-    background-color: #ffffff !important;
-    border: 1.5px solid #94a3b8 !important;
-    border-radius: 4px;
-    accent-color: #06b6d4;
-    width: 1rem;
-    height: 1rem;
-    cursor: pointer;
-}
-
-/* ── Label print modal: live-preview outer container ─────────────── */
-html[data-theme="light"] .bg-gray-950 {
-    background-color: #e2e8f0 !important;
-}
-
-/* ── Print modal: footer strip bg ───────────────────────────────── */
-html[data-theme="light"] .bg-gray-950\/20 {
-    background-color: rgba(241,245,249,0.6) !important;
-}
-
-/* ── Table: stock counter color in light mode ────────────────────── */
-/* text-gray-200 used for "normal" stock numbers in the table */
-html[data-theme="light"] .text-gray-200 {
-    color: #1e293b !important;
-}
-
-/* ── Export + search reset button ────────────────────────────────── */
-html[data-theme="light"] .bg-gray-800.border-gray-700 {
-    background-color: #e2e8f0 !important;
-    border-color: rgba(30,41,59,0.2) !important;
-}
-html[data-theme="light"] .text-gray-200.border-gray-700 {
+html[data-theme="light"] thead a {
     color: #334155 !important;
 }
 
-/* ── Autocomplete template dropdown ──────────────────────────────── */
-html[data-theme="light"] .bg-gray-950.border-gray-800.rounded-xl {
-    background-color: #ffffff !important;
-    border-color: rgba(30,41,59,0.15) !important;
-}
-html[data-theme="light"] .divide-gray-850 > * + * {
-    border-color: rgba(30,41,59,0.08) !important;
+html[data-theme="light"] tbody tr {
+    background-color: #ffffff;
 }
 
-/* ── Paginator strip ─────────────────────────────────────────────── */
-html[data-theme="light"] .bg-gray-950\/45 {
-    background-color: rgba(241,245,249,0.8) !important;
-}
-
-/* ── Table stock inline form bg ──────────────────────────────────── */
-html[data-theme="light"] .bg-gray-900\/60 {
-    background-color: rgba(241,245,249,0.9) !important;
-}
-html[data-theme="light"] .text-gray-200.font-bold.font-mono {
-    color: #1e293b !important;
-}
-
-html[data-theme="light"] header.glass-panel {
-    background: rgba(255,255,255,0.95) !important;
-    border-color: rgba(226,232,240,0.9) !important;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
-}
-
-html[data-theme="light"] footer {
-    background: rgba(241,245,249,0.7) !important;
-    border-color: rgba(226,232,240,0.9) !important;
-}
-
-html[data-theme="light"] h2,
-html[data-theme="light"] h3,
-html[data-theme="light"] h4 {
-    color: #0f172a;
-}
-
-/* Table rows in light mode */
-html[data-theme="light"] tbody tr:hover {
-    background-color: rgba(6,182,212,0.05) !important;
-}
-
-html[data-theme="light"] thead tr {
-    background-color: rgba(241,245,249,0.95) !important;
-}
-
-/* Modals in light mode */
-html[data-theme="light"] .glass-panel.max-w-lg,
-html[data-theme="light"] .glass-panel.max-w-2xl,
-html[data-theme="light"] .glass-panel.max-w-sm,
-html[data-theme="light"] .glass-panel.p-8 {
-    background: rgba(255,255,255,0.98) !important;
-    border-color: rgba(30,41,59,0.12) !important;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important;
+html[data-theme="light"] tbody td,
+html[data-theme="light"] tbody td a {
     color: #1e293b;
 }
 
-html[data-theme="light"] .glass-panel.max-w-lg h3,
-html[data-theme="light"] .glass-panel.max-w-2xl h3,
-html[data-theme="light"] .glass-panel.max-w-sm h3,
-html[data-theme="light"] .glass-panel.p-8 h3 {
-    color: #0f172a;
+html[data-theme="light"] tbody tr[class*="!bg-cyan-500/10"],
+html[data-theme="light"] tbody tr[class*="bg-cyan-500"] {
+    background-color: rgba(6, 182, 212, 0.12) !important;
+}
+
+/* Modal Backdrops in Light Mode */
+html[data-theme="light"] [class*="bg-black/60"],
+html[data-theme="light"] [class*="bg-black/75"],
+html[data-theme="light"] [class*="bg-black/80"],
+html[data-theme="light"] [class*="bg-black/85"],
+html[data-theme="light"] [class*="bg-gray-950/80"],
+html[data-theme="light"] [class*="bg-gray-950/85"] {
+    background-color: rgba(15, 23, 42, 0.55) !important;
+}
+
+/* Background Hovers */
+html[data-theme="light"] [class*="hover:bg-gray-700"]:hover,
+html[data-theme="light"] [class*="hover:bg-gray-700/"]:hover { background-color: #cbd5e1 !important; }
+html[data-theme="light"] [class*="hover:bg-gray-800"]:hover,
+html[data-theme="light"] [class*="hover:bg-gray-800/"]:hover { background-color: #cbd5e1 !important; }
+html[data-theme="light"] [class*="hover:bg-gray-900/30"]:hover { background-color: rgba(6, 182, 212, 0.06) !important; }
+
+/* Badges and Color Pill Tint Overrides */
+html[data-theme="light"] .bg-cyan-950,
+html[data-theme="light"] [class*="bg-cyan-950/20"],
+html[data-theme="light"] [class*="bg-cyan-950/40"],
+html[data-theme="light"] [class*="bg-cyan-950/80"],
+html[data-theme="light"] .bg-cyan-900,
+html[data-theme="light"] [class*="bg-cyan-900/60"] {
+    background-color: rgba(6, 182, 212, 0.12) !important;
+}
+html[data-theme="light"] .bg-purple-950,
+html[data-theme="light"] [class*="bg-purple-950/40"],
+html[data-theme="light"] .bg-purple-900,
+html[data-theme="light"] [class*="bg-purple-900/60"] {
+    background-color: rgba(139, 92, 246, 0.12) !important;
+}
+html[data-theme="light"] .bg-emerald-950,
+html[data-theme="light"] [class*="bg-emerald-950/40"],
+html[data-theme="light"] .bg-emerald-900,
+html[data-theme="light"] [class*="bg-emerald-900/60"] {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+}
+html[data-theme="light"] .bg-amber-950,
+html[data-theme="light"] [class*="bg-amber-950/40"],
+html[data-theme="light"] .bg-amber-900,
+html[data-theme="light"] [class*="bg-amber-900/60"] {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
+html[data-theme="light"] .bg-red-950,
+html[data-theme="light"] [class*="bg-red-950/40"],
+html[data-theme="light"] .bg-red-900,
+html[data-theme="light"] [class*="bg-red-900/60"],
+html[data-theme="light"] .bg-rose-950,
+html[data-theme="light"] [class*="bg-rose-950/40"] {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+}
+
+/* Header & Footer */
+html[data-theme="light"] header.glass-panel {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] footer {
+    background: rgba(241, 245, 249, 0.7) !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+/* Modals in light mode (all max-w sizes) */
+html[data-theme="light"] .glass-panel[class*="max-w-"],
+html[data-theme="light"] .glass-panel.max-w-lg,
+html[data-theme="light"] .glass-panel.max-w-2xl,
+html[data-theme="light"] .glass-panel.max-w-4xl,
+html[data-theme="light"] .glass-panel.max-w-6xl,
+html[data-theme="light"] .glass-panel.max-w-7xl,
+html[data-theme="light"] .glass-panel.max-w-sm,
+html[data-theme="light"] .glass-panel.max-w-md,
+html[data-theme="light"] .glass-panel.p-8 {
+    background: #ffffff !important;
+    border-color: rgba(30, 41, 59, 0.15) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12) !important;
+    color: #1e293b;
+}
+
+/* Dropdown Menus in Light Mode */
+html[data-theme="light"] .origin-top-right.bg-gray-900,
+html[data-theme="light"] .absolute.bg-gray-900.border-gray-800 {
+    background-color: #ffffff !important;
+    border-color: rgba(30, 41, 59, 0.15) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="light"] .origin-top-right.bg-gray-900 a,
+html[data-theme="light"] .absolute.bg-gray-900.border-gray-800 a {
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .origin-top-right.bg-gray-900 a:hover,
+html[data-theme="light"] .absolute.bg-gray-900.border-gray-800 a:hover {
+    background-color: rgba(6, 182, 212, 0.08) !important;
+    color: #0891b2 !important;
+}
+
+/* Mass action panel action buttons in Light Mode */
+html[data-theme="light"] aside.fixed .hover\:bg-cyan-500\/10:hover {
+    background-color: rgba(6, 182, 212, 0.12) !important;
+}
+html[data-theme="light"] aside.fixed .hover\:bg-purple-500\/10:hover {
+    background-color: rgba(168, 85, 247, 0.12) !important;
+}
+html[data-theme="light"] aside.fixed .hover\:bg-emerald-500\/10:hover {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+}
+html[data-theme="light"] aside.fixed .hover\:bg-rose-500\/10:hover {
+    background-color: rgba(244, 63, 94, 0.12) !important;
+}
+html[data-theme="light"] aside.fixed .hover\:bg-amber-500\/10:hover {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+html[data-theme="light"] aside.fixed .text-cyan-400 {
+    color: #0891b2 !important;
+}
+html[data-theme="light"] aside.fixed .text-purple-400 {
+    color: #9333ea !important;
+}
+html[data-theme="light"] aside.fixed .text-emerald-400 {
+    color: #059669 !important;
+}
+html[data-theme="light"] aside.fixed .text-rose-400 {
+    color: #e11d48 !important;
+}
+html[data-theme="light"] aside.fixed .text-amber-400 {
+    color: #d97706 !important;
+}
+
+/* Secondary & Export buttons in Light Mode */
+html[data-theme="light"] [class*="bg-gray-800/90"],
+html[data-theme="light"] .bg-gray-800 {
+    background-color: #f1f5f9 !important;
+    border-color: rgba(30, 41, 59, 0.18) !important;
+    color: #334155 !important;
+}
+
+html[data-theme="light"] [class*="bg-gray-800/90"]:hover,
+html[data-theme="light"] .bg-gray-800:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    border-color: rgba(6, 182, 212, 0.3) !important;
+}
+
+/* Multi-select Floating Panel & Tooltips */
+html[data-theme="light"] aside.fixed {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    border-color: rgba(30, 41, 59, 0.15) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-theme="light"] .group .bg-gray-950.border-gray-700 {
+    background-color: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+
+html[data-theme="light"] .group .bg-gray-950.border-gray-700 .text-cyan-300 {
+    color: #67e8f9 !important;
+}
+
+html[data-theme="light"] .group .bg-gray-950.border-gray-700 .text-purple-300 {
+    color: #d8b4fe !important;
+}
+
+html[data-theme="light"] .group .bg-gray-950.border-gray-700 .text-gray-200 {
+    color: #f1f5f9 !important;
+}
+
+/* Pagination Controls */
+html[data-theme="light"] nav[role="navigation"] a,
+html[data-theme="light"] nav[role="navigation"] span {
+    background-color: #f1f5f9 !important;
+    border-color: rgba(30, 41, 59, 0.15) !important;
+    color: #334155 !important;
+}
+
+html[data-theme="light"] nav[role="navigation"] span[aria-current="page"] > span {
+    background-color: #06b6d4 !important;
+    border-color: #06b6d4 !important;
+    color: #ffffff !important;
 }
 
 /* Custom Tooltip styling */
@@ -351,6 +389,7 @@ button.has-tooltip,
 a.has-tooltip,
 .btn-neon-cyan.has-tooltip,
 .btn-neon-purple.has-tooltip,
+.btn-neon-emerald.has-tooltip,
 [role="button"].has-tooltip {
     cursor: pointer;
 }
@@ -478,6 +517,17 @@ a.has-tooltip,
 .btn-neon-purple:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+}
+
+.btn-neon-emerald {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-neon-emerald:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
 /* Custom styled inputs */
@@ -671,3 +721,87 @@ html[data-theme="light"] .scan-overlay-error .scan-feedback-text {
 html[data-theme="light"] .scan-feedback-qty {
     color: #065f46 !important;
 }
+
+/* ── Activity Log Item Adaptive Styling ──────────────────────────── */
+.log-item-success {
+    background-color: rgba(16, 185, 129, 0.02) !important;
+    border-color: rgba(16, 185, 129, 0.15) !important;
+}
+.log-item-error {
+    background-color: rgba(239, 68, 68, 0.02) !important;
+    border-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Light Theme overrides for log items */
+html[data-theme="light"] .log-item-success {
+    background-color: rgba(16, 185, 129, 0.04) !important;
+}
+html[data-theme="light"] .log-item-error {
+    background-color: rgba(239, 68, 68, 0.04) !important;
+}
+
+/* Table styling within modal */
+.history-table {
+    font-family: 'Figtree', sans-serif !important;
+}
+.history-table th {
+    border-bottom: 1.5px solid var(--glass-border) !important;
+    color: var(--sck-body-color) !important;
+    opacity: 0.6;
+}
+.history-table td {
+    border-bottom: 1px solid var(--glass-border) !important;
+}
+.history-table tr:last-child td {
+    border-bottom: none !important;
+}
+.history-table tr {
+    transition: background-color 0.15s ease;
+}
+.history-table tr:hover {
+    background-color: rgba(6, 182, 212, 0.03) !important;
+}
+html[data-theme="light"] .history-table tr:hover {
+    background-color: rgba(6, 182, 212, 0.05) !important;
+}
+
+/* Badge Light mode overrides */
+html[data-theme="light"] .badge-scanner {
+    background-color: rgba(139, 92, 246, 0.1) !important;
+    color: #6d28d9 !important;
+    border-color: rgba(139, 92, 246, 0.2) !important;
+}
+html[data-theme="light"] .badge-quick {
+    background-color: rgba(6, 182, 212, 0.1) !important;
+    color: #0891b2 !important;
+    border-color: rgba(6, 182, 212, 0.2) !important;
+}
+html[data-theme="light"] .badge-manual {
+    background-color: rgba(100, 116, 139, 0.1) !important;
+    color: #475569 !important;
+    border-color: rgba(100, 116, 139, 0.2) !important;
+}
+
+/* Light Mode Overrides for Buttons & Controls inside/around the Modal */
+html[data-theme="light"] .bg-gray-800.border-gray-700:hover {
+    background-color: #cbd5e1 !important;
+}
+html[data-theme="light"] .hover\:text-cyan-400:hover {
+    color: #0891b2 !important;
+}
+html[data-theme="light"] .hover\:border-cyan-500\/30:hover {
+    border-color: rgba(6, 182, 212, 0.4) !important;
+}
+
+/* Soft danger buttons (e.g. Empty History) in light theme */
+html[data-theme="light"] .btn-danger-soft {
+    background-color: rgba(239, 68, 68, 0.08) !important;
+    color: #dc2626 !important;
+    border-color: rgba(239, 68, 68, 0.2) !important;
+}
+html[data-theme="light"] .btn-danger-soft:hover {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: #b91c1c !important;
+}
+
+

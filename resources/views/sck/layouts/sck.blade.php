@@ -29,7 +29,7 @@
 
     <!-- Top Navigation Header -->
     <header class="glass-panel border-b border-gray-800 sticky top-0 z-40 px-4 py-3 sm:px-8">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="w-full max-w-[1700px] mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <a href="{{ route('sck.dashboard', ['no_redirect' => 1]) }}" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 transition-transform active:scale-95">
                     <i class="fa-solid fa-screwdriver-wrench text-white text-lg"></i>
@@ -83,13 +83,13 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-grow max-w-7xl mx-auto w-full px-4 py-6 sm:px-8">
+    <main class="flex-grow w-full max-w-[1700px] mx-auto px-4 py-6 sm:px-8">
         @yield('content')
     </main>
 
     <!-- Footer -->
     <footer class="mt-auto py-6 border-t border-gray-950 text-center text-xs text-gray-600 bg-gray-950/20">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+        <div class="w-full max-w-[1700px] mx-auto px-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
             <p>&copy; 2026 Service Center Klein. Alle Rechte vorbehalten.</p>
             <div class="flex space-x-4">
                 <a href="{{ route('sck.dashboard', ['no_redirect' => 1]) }}" class="hover:text-cyan-400 transition-colors">Hauptmenü</a>
@@ -174,5 +174,6 @@
         });
     </script>
 
+    @stack('scripts')
 </body>
 </html>
