@@ -9,7 +9,7 @@ class SckWarehouseLog extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'item_id', 'success', 'action', 'type', 'message'];
+    protected $fillable = ['user_id', 'item_id', 'tour_id', 'tour_stop_id', 'quantity', 'invoice_hash', 'success', 'action', 'type', 'message'];
 
     public function user()
     {

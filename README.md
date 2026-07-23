@@ -21,6 +21,20 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## RouteXL configuration
+
+RouteXL uses HTTP Basic Authentication with your RouteXL account credentials; it does not issue a separate API key. Add the following values to `.env` (use the account username, not the email address):
+
+```dotenv
+ROUTEXL_USERNAME=your_routexl_username
+ROUTEXL_PASSWORD=your_routexl_password
+ROUTEXL_API_URL=https://api.routexl.com
+```
+
+After changing environment values on a server where Laravel configuration is cached, run `php artisan config:clear` (or rebuild the configuration cache during deployment).
+
+RouteXL determines the optimized waypoint order and supplies arrival/cumulative-distance metrics. TomTom then calculates the drivable road geometry for that order. Geometry is stored as a precision-5 encoded polyline (`p5:` prefix); existing JSON geometry remains readable for backward compatibility.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.

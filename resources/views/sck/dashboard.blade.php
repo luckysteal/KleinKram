@@ -22,6 +22,11 @@
                     <select name="default_app" id="default_app" onchange="this.form.submit()" class="sck-input text-sm rounded-lg px-3 py-2 w-full mt-1">
                         <option value="">-- Keine (Hauptmenü anzeigen) --</option>
                         <option value="lager" {{ auth()->user()->sck_default_app === 'lager' ? 'selected' : '' }}>Lagersystem</option>
+                        <option value="kunden" {{ auth()->user()->sck_default_app === 'kunden' ? 'selected' : '' }}>Kundendatenbank</option>
+                        <option value="routen" {{ auth()->user()->sck_default_app === 'routen' ? 'selected' : '' }}>Routenplanung</option>
+                        <option value="wochenplanung" {{ auth()->user()->sck_default_app === 'wochenplanung' ? 'selected' : '' }}>Wochenplanung</option>
+                        <option value="adressverwaltung" {{ auth()->user()->sck_default_app === 'adressverwaltung' ? 'selected' : '' }}>Adressverwaltung</option>
+                        <option value="karte" {{ auth()->user()->sck_default_app === 'karte' ? 'selected' : '' }}>Karte</option>
                     </select>
                 </div>
             </form>
@@ -30,22 +35,33 @@
 
     <!-- Grid of sub-apps -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Lagersystem Card -->
-        <a href="{{ route('sck.lager.index') }}" class="glass-panel glass-panel-hover p-6 rounded-2xl border border-gray-800 flex flex-col justify-between group transition-all duration-300 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform"></div>
-            
+        @foreach([
+            ['route'=>'sck.lager.index','icon'=>'fa-boxes-stacked','accent'=>'cyan','title'=>'Lagersystem','text'=>'Verwalte Lagerbestand, Barcodes, Ein- und Ausbuchungen sowie Bestandslisten.','status'=>'Bereit für QR-Scan'],
+            ['route'=>'sck.kunden.index','icon'=>'fa-address-book','accent'=>'purple','title'=>'Kundendatenbank','text'=>'Kontakte, Einsatzhistorie, Reputation, Fotos, Kommentare und Margen.','status'=>'Kunden im Blick'],
+            ['route'=>'sck.routen.index','icon'=>'fa-route','accent'=>'emerald','title'=>'Routenplanung','text'=>'Einzelne Touren planen, dokumentieren, abrechnen und exportieren.','status'=>'Touren planen'],
+            ['route'=>'sck.wochenplanung.index','icon'=>'fa-calendar-week','accent'=>'orange','title'=>'Wochenplanung','text'=>'Stopps auf mehrere Touren verteilen und drei optimierte Varianten vergleichen.','status'=>'Wochen optimieren'],
+            ['route'=>'sck.administration.addresses.index','icon'=>'fa-location-crosshairs','accent'=>'cyan','title'=>'Adressverwaltung','text'=>'Fehlende Breiten- und Längengrade für Kunden und Stopps gezielt berechnen.','status'=>'Koordinaten prüfen'],
+            ['route'=>'sck.map.index','icon'=>'fa-map-location-dot','accent'=>'purple','title'=>'Karte','text'=>'Home, Kunden, eigene Punkte und RouteXL-Touren gemeinsam auf der TomTom-Karte anzeigen.','status'=>'Touren visualisieren'],
+        ] as $app)
+        <a href="{{ route($app['route']) }}" class="glass-panel glass-panel-hover p-6 rounded-2xl border border-gray-800 flex min-h-[260px] flex-col justify-between group transition-all duration-300 relative overflow-hidden">
+            <div @class([
+                'absolute top-0 right-0 w-24 h-24 bg-gradient-to-br to-transparent rounded-bl-full pointer-events-none group-hover:scale-110 transition-transform duration-300',
+                'from-cyan-500/10' => $app['accent'] === 'cyan',
+                'from-purple-500/10' => $app['accent'] === 'purple',
+                'from-emerald-500/10' => $app['accent'] === 'emerald',
+                'from-orange-500/10' => $app['accent'] === 'orange',
+            ])></div>
+
             <div class="space-y-4">
-                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300">
-                    <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+                <div class="sck-dashboard-app-icon w-12 h-12 rounded-xl border flex items-center justify-center transition-all duration-300" data-accent="{{ $app['accent'] }}">
+                    <i class="fa-solid {{ $app['icon'] }} text-2xl"></i>
                 </div>
                 <div class="space-y-1">
                     <h3 class="text-xl font-bold tracking-tight group-hover:text-cyan-400 transition-colors flex items-center space-x-2">
-                        <span>Lagersystem</span>
+                        <span>{{ $app['title'] }}</span>
                         <i class="fa-solid fa-arrow-right text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"></i>
                     </h3>
-                    <p class="text-sm text-gray-400 leading-relaxed">
-                        Verwalte den aktuellen Lagerbestand, generiere neue Barcodes, führe Ein- und Ausbuchungen durch und exportiere Bestandslisten.
-                    </p>
+                    <p class="text-sm text-gray-400 leading-relaxed">{{ $app['text'] }}</p>
                 </div>
             </div>
 
@@ -54,25 +70,10 @@
                     <i class="fa-solid fa-circle text-[6px] text-emerald-500 animate-pulse"></i>
                     <span>Aktiviert</span>
                 </span>
-                <span>Bereit für QR-Scan</span>
+                <span>{{ $app['status'] }}</span>
             </div>
         </a>
-
-        <!-- Placeholder for future apps -->
-        <div class="glass-panel p-6 rounded-2xl border border-dashed border-gray-800 flex flex-col justify-between items-center text-center opacity-40 cursor-not-allowed select-none">
-            <div class="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center text-gray-500">
-                <i class="fa-solid fa-plus text-2xl"></i>
-            </div>
-            <div class="space-y-1 mt-4">
-                <h3 class="text-lg font-bold tracking-tight text-gray-400">Weitere Sub-Apps</h3>
-                <p class="text-xs text-gray-500 px-4">
-                    Das System ist modular aufgebaut. Zukünftige Applikationen können hier einfach hinzugefügt werden.
-                </p>
-            </div>
-            <div class="mt-6 text-[10px] text-gray-600 uppercase font-semibold">
-                In Planung
-            </div>
-        </div>
+        @endforeach
     </div>
 </div>
 @endsection

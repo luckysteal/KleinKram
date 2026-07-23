@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><style>
+body{font-family:DejaVu Sans,sans-serif;font-size:10px;color:#172033}h1{margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ccd4df;padding-bottom:3px}.meta{color:#526172}.metrics{width:100%;border-collapse:collapse;margin:12px 0}.metrics td,.items th,.items td{border:1px solid #d8dee7;padding:5px}.items{width:100%;border-collapse:collapse}.items th{background:#edf2f7;text-align:left}.stop{page-break-inside:avoid}.comment{border-left:3px solid #94a3b8;padding-left:7px;margin:5px 0}.photos img{width:145px;height:105px;object-fit:cover;margin:3px}.right{text-align:right}.warning{background:#fff4d6;border:1px solid #efbd45;padding:8px}
+</style></head><body>
+<h1>{{ $tour->title }}</h1><div class="meta">{{ $tour->number }} · {{ optional($tour->tour_date)->format('d.m.Y') }} · Alle Entfernungen und Zeiten sind geplant.</div>
+<table class="metrics"><tr><td><b>Plan-km</b><br>{{ number_format($tour->planned_km,1,',','.') }}</td><td><b>Fahrzeit</b><br>{{ $tour->planned_drive_minutes }} Min.</td><td><b>Service</b><br>{{ $tour->planned_service_minutes }} Min.</td><td><b>Anfahrt</b><br>{{ number_format($tour->travel_fee_pool,2,',','.') }} €</td><td><b>Umsatz netto</b><br>{{ number_format($tour->sales_total,2,',','.') }} €</td><td><b>Marge</b><br>{{ number_format($tour->margin,2,',','.') }} €</td></tr></table>
+@foreach($tour->stops as $stop)<section class="stop"><h2>{{ $stop->position }}. {{ $stop->title }}</h2><div>{{ $stop->address_snapshot['formatted'] ?? '' }} @if($stop->customer)· {{ $stop->customer->name }}@endif</div><div class="meta">Service {{ $stop->service_minutes }} Min. · Anfahrtskosten {{ number_format($stop->allocated_travel_fee,2,',','.') }} €</div>
+@if($stop->items->isNotEmpty())<table class="items"><thead><tr><th>Artikel / Leistung</th><th>Menge</th><th>EK netto</th><th>Verkauf netto</th><th>Steuer</th></tr></thead><tbody>@foreach($stop->items as $item)<tr><td>{{ $item->item_name }}</td><td>{{ $item->quantity }} {{ $item->unit }}</td><td class="right">{{ number_format($item->ek_snapshot,2,',','.') }} €</td><td class="right">{{ number_format($item->actual_net_price,2,',','.') }} €</td><td class="right">{{ number_format($item->tax_rate,0) }} %</td></tr>@endforeach</tbody></table>@endif
+@if($stop->notes)<p><b>Notiz:</b> {{ $stop->notes }}</p>@endif
+@foreach($stop->comments as $comment)<div class="comment"><b>{{ $comment->user?->name ?? 'Unbekannt' }}</b>, {{ $comment->created_at->format('d.m.Y H:i') }}: {{ $comment->body }}</div>@endforeach
+@if($includePhotos && $stop->photos->isNotEmpty())<div class="photos">@foreach($stop->photos as $photo)@if(isset($photoData[$photo->id]))<img src="{{ $photoData[$photo->id] }}" alt="{{ $photo->caption }}">@endif @endforeach</div>@endif
+</section>@endforeach
+<p class="meta">Erstellt am {{ now()->format('d.m.Y H:i') }}. Geplante Werte; keine GPS-/Tachometer-Erfassung.</p>
+</body></html>

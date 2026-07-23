@@ -39,4 +39,20 @@ return [
         'api_key' => env('OCR_SPACE_API_KEY', 'K89317752788957'),
     ],
 
+    'tomtom' => [
+        'key' => env('TOMTOM_API_KEY'),
+        'base_url' => env('TOMTOM_API_URL', 'https://api.tomtom.com'),
+    ],
+
+    'routexl' => [
+        'username' => env('ROUTEXL_USERNAME'),
+        'password' => env('ROUTEXL_PASSWORD'),
+        'base_url' => env('ROUTEXL_API_URL', 'https://api.routexl.com'),
+    ],
+
+    'sck_media' => [
+        'max_upload_mb' => env('SCK_PHOTO_MAX_MB', 15),
+        'max_photos_per_stop' => env('SCK_PHOTO_MAX_PER_STOP', 30),
+    ],
+
 ];

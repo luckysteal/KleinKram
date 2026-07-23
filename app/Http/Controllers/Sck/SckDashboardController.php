@@ -17,9 +17,8 @@ class SckDashboardController extends Controller
         // If the user configured a default sub-app, redirect there,
         // unless they explicitly request to see the dashboard menu (?no_redirect=1)
         if ($user->sck_default_app && !$request->has('no_redirect')) {
-            if ($user->sck_default_app === 'lager') {
-                return redirect()->route('sck.lager.index');
-            }
+            $routes = ['lager' => 'sck.lager.index', 'kunden' => 'sck.kunden.index', 'routen' => 'sck.routen.index', 'wochenplanung' => 'sck.wochenplanung.index', 'adressverwaltung' => 'sck.administration.addresses.index', 'karte' => 'sck.map.index'];
+            if (isset($routes[$user->sck_default_app])) return redirect()->route($routes[$user->sck_default_app]);
         }
 
         return view('sck.dashboard');
@@ -31,7 +30,7 @@ class SckDashboardController extends Controller
     public function setDefaultApp(Request $request)
     {
         $request->validate([
-            'default_app' => 'nullable|string|in:lager',
+            'default_app' => 'nullable|string|in:lager,kunden,routen,wochenplanung,adressverwaltung,karte',
         ]);
 
         $user = $request->user();
