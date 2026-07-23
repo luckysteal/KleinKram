@@ -16,6 +16,7 @@
 
     <!-- Compiled Assets (Strictly isolated sck bundle) -->
     @vite(['resources/css/sck.css', 'resources/js/sck.js'])
+    @stack('styles')
 
     <!-- Apply saved theme immediately to prevent flash -->
     <script>
@@ -29,7 +30,17 @@
 
     <!-- Top Navigation Header -->
     <header class="glass-panel border-b border-gray-800 sticky top-0 z-40 px-4 py-3 sm:px-8">
-        <div class="w-full max-w-[1700px] mx-auto flex items-center justify-between">
+        @php
+            $primaryNavigation = [
+                ['route' => 'sck.dashboard', 'parameters' => ['no_redirect' => 1], 'active' => 'sck.dashboard', 'label' => 'Übersicht', 'icon' => 'fa-grid-2'],
+                ['route' => 'sck.lager.index', 'parameters' => [], 'active' => 'sck.lager.*', 'label' => 'Lager', 'icon' => 'fa-boxes-stacked'],
+                ['route' => 'sck.kunden.index', 'parameters' => [], 'active' => 'sck.kunden.*', 'label' => 'Kunden', 'icon' => 'fa-address-book'],
+                ['route' => 'sck.routen.index', 'parameters' => [], 'active' => 'sck.routen.*', 'label' => 'Routen', 'icon' => 'fa-route'],
+                ['route' => 'sck.wochenplanung.index', 'parameters' => [], 'active' => 'sck.wochenplanung.*', 'label' => 'Woche', 'icon' => 'fa-calendar-week'],
+                ['route' => 'sck.map.index', 'parameters' => [], 'active' => 'sck.map.*', 'label' => 'Karte', 'icon' => 'fa-map-location-dot'],
+            ];
+        @endphp
+        <div class="w-full max-w-[1700px] mx-auto flex flex-wrap items-center gap-x-4 gap-y-3">
             <div class="flex items-center space-x-3">
                 <a href="{{ route('sck.dashboard', ['no_redirect' => 1]) }}" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 transition-transform active:scale-95">
                     <i class="fa-solid fa-screwdriver-wrench text-white text-lg"></i>
@@ -42,15 +53,25 @@
                 </div>
             </div>
 
-            <!-- Header Actions -->
-            <div class="flex items-center space-x-3">
-                <!-- User name with tooltip -->
-                <div class="hidden sm:flex items-center space-x-2 bg-gray-900/60 px-3 py-1.5 rounded-full border border-gray-800 has-tooltip cursor-default">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse"></span>
-                    <span class="text-sm font-semibold text-gray-300">{{ auth()->user()->name }}</span>
-                    <div class="tooltip-item tooltip-left">Angemeldet als {{ auth()->user()->name }}. Typ: {{ auth()->user()->is_admin ? 'Admin' : (auth()->user()->role ?? 'Benutzer') }}</div>
-                </div>
+            <!-- Primary SCK navigation -->
+            <nav class="order-3 flex w-full items-center gap-1 overflow-x-auto pb-0.5 lg:order-2 lg:w-auto lg:flex-1 lg:justify-center lg:overflow-visible" aria-label="SCK Hauptnavigation">
+                @foreach($primaryNavigation as $item)
+                    @php($isActive = request()->routeIs($item['active']))
+                    <a href="{{ route($item['route'], $item['parameters']) }}"
+                       @class([
+                           'inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition-all duration-200',
+                           'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shadow-sm shadow-cyan-500/10' => $isActive,
+                           'border-transparent text-gray-400 hover:border-gray-700 hover:bg-gray-900/60 hover:text-gray-100' => ! $isActive,
+                       ])
+                       @if($isActive) aria-current="page" @endif>
+                        <i class="fa-solid {{ $item['icon'] }} text-xs"></i>
+                        <span>{{ $item['label'] }}</span>
+                    </a>
+                @endforeach
+            </nav>
 
+            <!-- Header Actions -->
+            <div class="ml-auto flex items-center space-x-2 lg:order-3">
                 <!-- Dark / Light Mode Toggle -->
                 <button id="theme-toggle"
                         class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-cyan-400 bg-gray-900/40 hover:bg-cyan-500/10 border border-gray-800 hover:border-cyan-500/30 transition-all duration-200 has-tooltip"
@@ -63,27 +84,50 @@
                     <div class="tooltip-item tooltip-left">Hell-/Dunkel-Modus umschalten</div>
                 </button>
 
-                <!-- Back to Main App Button -->
-                <a href="{{ route('dashboard') }}" class="hidden sm:inline-flex items-center space-x-1.5 text-xs text-gray-400 hover:text-cyan-400 bg-gray-900/40 hover:bg-cyan-500/10 px-3 py-2 rounded-lg border border-gray-800 hover:border-cyan-500/30 transition-all duration-200 has-tooltip">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    <span>Haupt-Dashboard</span>
-                    <div class="tooltip-item">Verlässt das SCK-Portal und öffnet das reguläre Benutzer-Dashboard.</div>
-                </a>
-
-                <!-- Logout Button -->
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button type="submit" class="flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-red-400 bg-gray-900/40 hover:bg-red-500/10 border border-gray-800 hover:border-red-500/30 transition-all duration-200 has-tooltip">
-                        <i class="fa-solid fa-power-off"></i>
-                        <div class="tooltip-item tooltip-left">Meldet dich sicher von der gesamten Anwendung ab.</div>
+                <!-- Profile menu -->
+                <div x-data="{ open: false }" class="relative" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <button type="button"
+                            @click="open = !open"
+                            class="flex h-9 w-9 items-center justify-center rounded-full border border-gray-800 bg-gray-900/40 text-gray-400 transition-all duration-200 hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-400 has-tooltip"
+                            :aria-expanded="open.toString()"
+                            aria-controls="sck-profile-menu"
+                            aria-label="Profilmenü öffnen">
+                        <i class="fa-solid fa-user text-sm"></i>
+                        <div class="tooltip-item tooltip-left">Profilmenü</div>
                     </button>
-                </form>
+
+                    <div id="sck-profile-menu"
+                         x-show="open"
+                         x-cloak
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                         x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-gray-700 bg-gray-900 shadow-2xl">
+                        <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-gray-200 transition-colors hover:bg-cyan-500/10 hover:text-cyan-300">
+                            <i class="fa-solid fa-user-gear w-4"></i>
+                            <span>Profil</span>
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}" class="border-t border-gray-800">
+                            @csrf
+                            <button type="submit" class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-300 transition-colors hover:bg-red-500/10 hover:text-red-400">
+                                <i class="fa-solid fa-arrow-right-from-bracket w-4"></i>
+                                <span>Abmelden</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- Main Content Area -->
     <main class="flex-grow w-full max-w-[1700px] mx-auto px-4 py-6 sm:px-8">
+        @if($errors->any())
+            <div class="mb-5 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-red-300"><strong>Bitte Eingaben prüfen:</strong><ul class="list-disc ml-5 mt-1 text-sm">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+        @endif
         @yield('content')
     </main>
 
@@ -94,6 +138,10 @@
             <div class="flex space-x-4">
                 <a href="{{ route('sck.dashboard', ['no_redirect' => 1]) }}" class="hover:text-cyan-400 transition-colors">Hauptmenü</a>
                 <a href="{{ route('sck.lager.index') }}" class="hover:text-cyan-400 transition-colors">Lagersystem</a>
+                <a href="{{ route('sck.kunden.index') }}" class="hover:text-cyan-400 transition-colors">Kunden</a>
+                <a href="{{ route('sck.routen.index') }}" class="hover:text-cyan-400 transition-colors">Routen</a>
+                <a href="{{ route('sck.wochenplanung.index') }}" class="hover:text-cyan-400 transition-colors">Woche</a>
+                <a href="{{ route('sck.map.index') }}" class="hover:text-cyan-400 transition-colors">Karte</a>
             </div>
         </div>
     </footer>
@@ -140,6 +188,7 @@
         <button @click="show = false" class="flex-shrink-0 text-gray-500 hover:text-gray-300 transition-colors">
             <i class="fa-solid fa-xmark"></i>
         </button>
+    </div>
     <!-- Global Print Section -->
     <div id="print-section" class="hidden"></div>
 
@@ -165,6 +214,7 @@
             html.setAttribute('data-theme', next);
             localStorage.setItem('sck-theme', next);
             syncThemeIcons(next);
+            window.dispatchEvent(new CustomEvent('sck-theme-changed', { detail: { theme: next } }));
         }
 
         // Sync icons on DOMContentLoaded (theme is already applied inline above)

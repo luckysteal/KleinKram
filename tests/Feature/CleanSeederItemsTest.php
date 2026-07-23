@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Sck\SckWarehouseItem;
+use App\Models\Sck\SckCustomer;
 use Database\Seeders\SckSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,6 +11,20 @@ use Tests\TestCase;
 class CleanSeederItemsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_sck_seeder_creates_customers_idempotently(): void
+    {
+        $this->seed(SckSeeder::class);
+        $this->seed(SckSeeder::class);
+
+        $this->assertSame(27, SckCustomer::count());
+        $this->assertDatabaseHas('sck_customers', [
+            'datev_account' => '10001',
+            'name' => 'Kaffeewerk Fulda GmbH',
+            'city' => 'Fulda',
+        ]);
+        $this->assertSame(0, SckCustomer::whereNull('latitude')->orWhereNull('longitude')->count());
+    }
 
     public function test_clean_seeder_items_command_removes_only_seeded_items()
     {

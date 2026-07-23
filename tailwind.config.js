@@ -11,6 +11,14 @@ export default {
 
     safelist: [
         'animate-fall-down',
+        'bg-purple-500/10', 'border-purple-500/20', 'text-purple-400',
+        'bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400',
+        'bg-orange-500/10', 'border-orange-500/20', 'text-orange-400',
+        'group-hover:bg-cyan-500', 'group-hover:border-cyan-500',
+        'group-hover:bg-purple-500', 'group-hover:border-purple-500',
+        'group-hover:bg-emerald-500', 'group-hover:border-emerald-500',
+        'group-hover:bg-orange-500', 'group-hover:border-orange-500',
+        'group-hover:text-white',
     ],
 
     theme: {

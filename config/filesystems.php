@@ -36,6 +36,13 @@ return [
             'throw' => false,
         ],
 
+        'sck_private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/sck-private'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
